@@ -1,0 +1,11 @@
+streamlit
+feedparser
+httpx
+requests
+pandas
+pydantic
+python-dotenv
+pyyaml
+plotly
+geopy
+apscheduler

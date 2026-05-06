@@ -1,0 +1,130 @@
+**一、首次配置**
+```powershell
+git config --global user.name "ZYWY457"
+git config --global user.email "1781711723@qq.com"
+git config --global core.autocrlf true
+```
+查看配置：
+```powershell
+git config --global --list
+`
+**二、日常提交**
+查看状态：
+```powershell
+git status
+```
+查看改动：
+```powershell
+git diff
+```
+暂存全部改动：
+```powershell
+git add .
+```
+暂存指定文件：
+```powershell
+git add 文件路径
+```
+提交：
+```powershell
+git commit -m "feat: xxx"
+```
+
+推送到 GitHub：
+```powershell
+git push origin main
+```
+
+**三、同步另一台电脑的最新代码**
+如果仓库还没下载：
+```powershell
+git clone https://github.com/ZYWY457/shuziyg.git
+cd shuziyg
+```
+
+如果仓库已经存在，直接更新：
+```powershell
+git pull origin main
+```
+
+查看当前分支：
+```powershell
+git branch --show-current
+```
+
+查看最近提交：
+```powershell
+git log --oneline -n 5
+```
+
+**四、提交前后常用检查**
+查看暂存内容：
+```powershell
+git diff --cached
+```
+
+查看远程仓库地址：
+```powershell
+git remote -v
+```
+
+**五、网络/推送失败排查**
+检查 GitHub 443 是否可达：
+```powershell
+Test-NetConnection github.com -Port 443
+```
+
+查看 Git 代理：
+```powershell
+git config --global --get http.proxy
+git config --global --get https.proxy
+```
+
+取消 Git 代理：
+```powershell
+git config --global --unset http.proxy
+git config --global --unset https.proxy
+```
+
+重新推送：
+```powershell
+git push origin main
+```
+
+**六、本地有改动但要先拉远程**
+临时保存改动：
+```powershell
+git stash
+git pull origin main
+git stash pop
+```
+
+或者先提交再拉：
+```powershell
+git add .
+git commit -m "wip: save local changes"
+git pull origin main
+```
+
+**七、最常用的一套流程**
+```powershell
+git status
+git add .
+git commit -m "feat: xxx"
+git push origin main
+```
+
+**八、另一台电脑同步最常用**
+```powershell
+git pull origin main
+```
+
+如果你要“保存”成文件，我下一条可以直接帮你整理成一份 `Git_常用命令清单.md` 的内容。
+
+上传：
+git status
+git add .
+git commit -m "feat: "
+git push origin main
+
+

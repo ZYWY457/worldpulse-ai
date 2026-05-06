@@ -1,0 +1,94 @@
+sources:
+  # --- World & Geopolitics ---
+  - name: BBC World
+    type: rss
+    category: world
+    url: https://feeds.bbci.co.uk/news/world/rss.xml
+  - name: Reuters World
+    type: rss
+    category: world
+    url: https://www.reutersagency.com/feed/?best-topics=world-news&post_type=best
+  - name: Al Jazeera
+    type: rss
+    category: world
+    url: https://www.aljazeera.com/xml/rss/all.xml
+  - name: AP News
+    type: rss
+    category: world
+    url: https://apnews.com/hub/world-news.rss
+  - name: The Guardian World
+    type: rss
+    category: world
+    url: https://www.theguardian.com/world/rss
+  - name: UN News
+    type: rss
+    category: world
+    url: https://news.un.org/feed/subscribe/en/news/all/rss.xml
+
+  # --- Finance & Economy ---
+  - name: CNBC Finance
+    type: rss
+    category: finance
+    url: https://www.cnbc.com/id/100003114/device/rss/rss.html
+  - name: Bloomberg Markets
+    type: rss
+    category: finance
+    url: https://www.bloomberg.com/politics/feeds/site.xml
+  - name: Financial Times
+    type: rss
+    category: finance
+    url: https://www.ft.com/?format=rss
+  - name: MarketWatch
+    type: rss
+    category: finance
+    url: http://feeds.marketwatch.com/marketwatch/topstories/
+  - name: The Economist
+    type: rss
+    category: finance
+    url: https://www.economist.com/sections/economics/rss.xml
+
+  # --- Conflict & Military ---
+  - name: Defense One
+    type: rss
+    category: conflict
+    url: https://www.defenseone.com/rss/all/
+  - name: RealClearDefense
+    type: rss
+    category: conflict
+    url: https://www.realcleardefense.com/index.xml
+  - name: Task & Purpose
+    type: rss
+    category: conflict
+    url: https://taskandpurpose.com/feed/
+  - name: Crisis Group
+    type: rss
+    category: conflict
+    url: https://www.crisisgroup.org/rss-0
+
+  # --- Technology & Energy ---
+  - name: TechCrunch
+    type: rss
+    category: technology
+    url: https://techcrunch.com/feed/
+  - name: Wired
+    type: rss
+    category: technology
+    url: https://www.wired.com/feed/rss
+  - name: OilPrice
+    type: rss
+    category: energy
+    url: https://oilprice.com/rss/main
+  - name: World Nuclear News
+    type: rss
+    category: energy
+    url: https://world-nuclear-news.org/RSS/WNN_RSS.aspx
+
+  # --- Health & Society ---
+  - name: WHO News
+    type: rss
+    category: health
+    url: https://www.who.int/rss-feeds/news-english.xml
+  - name: New York Times
+    type: rss
+    category: society
+    url: https://rss.nytimes.com/services/xml/rss/nyt/World.xml
