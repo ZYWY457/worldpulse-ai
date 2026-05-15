@@ -9,3 +9,7 @@ pyyaml
 plotly
 geopy
 apscheduler
+fastapi
+uvicorn
+python-multipart
+openai

@@ -46,6 +46,13 @@ body {
   color: var(--muted);
 }
 
+.topbar .product-copy {
+  max-width: 760px;
+  color: #30354a;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .actions {
   display: flex;
   gap: 10px;
@@ -214,7 +221,8 @@ select:disabled {
   display: grid;
   grid-template-columns: minmax(760px, 1fr) 340px;
   grid-template-areas:
-    "map side";
+    "map side"
+    "map keywords";
   gap: 12px;
   align-items: start;
 }
@@ -238,7 +246,39 @@ select:disabled {
 }
 
 .country-panel {
-  grid-column: side;
+  grid-area: side;
+}
+
+.keyword-panel {
+  grid-area: keywords;
+}
+
+.keyword-panel textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 118px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fffdfa;
+  color: var(--ink);
+  padding: 8px;
+  line-height: 1.45;
+}
+
+.keyword-hit {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.keyword-hit strong {
+  color: var(--accent);
+  font-size: 18px;
+}
+
+.keyword-hit span {
+  color: #30354a;
 }
 
 .map-titlebar {
@@ -356,6 +396,19 @@ select:disabled {
   white-space: pre-wrap;
   font-family: "IBM Plex Mono", Consolas, monospace;
   line-height: 1.5;
+  color: #2d3142;
+}
+
+.brief-copy {
+  margin: 0 0 10px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fffdfa;
+  white-space: pre-wrap;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  font-size: 12px;
+  line-height: 1.55;
   color: #2d3142;
 }
 
@@ -778,7 +831,8 @@ select:disabled {
     grid-template-columns: 1fr;
     grid-template-areas:
       "map"
-      "side";
+      "side"
+      "keywords";
   }
 
   .map-panel {

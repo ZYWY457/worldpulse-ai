@@ -4,91 +4,145 @@ sources:
     type: rss
     category: world
     url: https://feeds.bbci.co.uk/news/world/rss.xml
+    enabled: false
+    reason: "Timed out in current network diagnostics; re-enable if your network reaches BBC reliably."
+    max_items: 25
   - name: Reuters World
     type: rss
     category: world
     url: https://www.reutersagency.com/feed/?best-topics=world-news&post_type=best
+    enabled: false
+    reason: "Current URL returns 404 in diagnostics; replace before enabling."
   - name: Al Jazeera
     type: rss
     category: world
+    source_weight: 0.86
     url: https://www.aljazeera.com/xml/rss/all.xml
+    max_items: 25
   - name: AP News
     type: rss
     category: world
     url: https://apnews.com/hub/world-news.rss
+    enabled: false
+    reason: "Current URL returns 404 in diagnostics; AP no longer exposes this feed reliably."
   - name: The Guardian World
     type: rss
     category: world
+    source_weight: 0.88
     url: https://www.theguardian.com/world/rss
+    max_items: 25
   - name: UN News
     type: rss
     category: world
+    source_weight: 0.92
     url: https://news.un.org/feed/subscribe/en/news/all/rss.xml
+    max_items: 25
 
   # --- Finance & Economy ---
   - name: CNBC Finance
     type: rss
     category: finance
+    source_weight: 0.84
     url: https://www.cnbc.com/id/100003114/device/rss/rss.html
+    max_items: 25
   - name: Bloomberg Markets
     type: rss
     category: finance
     url: https://www.bloomberg.com/politics/feeds/site.xml
+    enabled: false
+    reason: "Current URL returns 403 in diagnostics."
   - name: Financial Times
     type: rss
     category: finance
+    source_weight: 0.9
     url: https://www.ft.com/?format=rss
+    max_items: 25
   - name: MarketWatch
     type: rss
     category: finance
     url: http://feeds.marketwatch.com/marketwatch/topstories/
+    enabled: false
+    reason: "Current URL returns 502 in diagnostics."
   - name: The Economist
     type: rss
     category: finance
     url: https://www.economist.com/sections/economics/rss.xml
+    enabled: false
+    reason: "Current URL has SSL/feed errors in diagnostics."
 
   # --- Conflict & Military ---
   - name: Defense One
     type: rss
     category: conflict
+    source_weight: 0.8
     url: https://www.defenseone.com/rss/all/
+    max_items: 25
   - name: RealClearDefense
     type: rss
     category: conflict
+    source_weight: 0.76
     url: https://www.realcleardefense.com/index.xml
+    max_items: 25
   - name: Task & Purpose
     type: rss
     category: conflict
+    source_weight: 0.76
     url: https://taskandpurpose.com/feed/
+    max_items: 25
   - name: Crisis Group
     type: rss
     category: conflict
     url: https://www.crisisgroup.org/rss-0
+    enabled: false
+    reason: "Current URL has SSL/feed errors in diagnostics."
 
   # --- Technology & Energy ---
   - name: TechCrunch
     type: rss
     category: technology
+    source_weight: 0.78
     url: https://techcrunch.com/feed/
+    max_items: 25
   - name: Wired
     type: rss
     category: technology
     url: https://www.wired.com/feed/rss
+    enabled: false
+    reason: "Current URL has SSL/feed errors in diagnostics."
   - name: OilPrice
     type: rss
     category: energy
+    source_weight: 0.72
     url: https://oilprice.com/rss/main
+    max_items: 25
   - name: World Nuclear News
     type: rss
     category: energy
     url: https://world-nuclear-news.org/RSS/WNN_RSS.aspx
+    enabled: false
+    reason: "Current URL returns 404 in diagnostics."
+    max_items: 25
 
   # --- Health & Society ---
   - name: WHO News
     type: rss
     category: health
+    source_weight: 0.92
     url: https://www.who.int/rss-feeds/news-english.xml
+    max_items: 25
   - name: New York Times
     type: rss
     category: society
+    source_weight: 0.9
     url: https://rss.nytimes.com/services/xml/rss/nyt/World.xml
+    max_items: 25
+
+gdelt:
+  enabled: true
+  source_weight: 0.55
+  timespan: 24h
+  max_records: 50
+  sort: datedesc
+  queries:
+    - category: world
+      query: '(war OR conflict OR missile OR drone OR attack OR military OR ceasefire OR election OR protest OR sanctions OR coup OR "state of emergency" OR diplomacy OR inflation OR recession OR "central bank" OR oil OR trade OR earthquake OR flood OR wildfire OR hurricane OR outbreak OR epidemic OR cybersecurity OR semiconductor OR "data breach")'

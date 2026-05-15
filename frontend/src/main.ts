@@ -21,6 +21,9 @@ type EventItem = {
   severity: number | null;
   confidence?: number | null;
   risk_level: "low" | "medium" | "high" | "critical" | null;
+  affected_groups?: string | string[] | null;
+  business_impact?: string | null;
+  suggested_action?: string | null;
   social_angle?: string | null;
   status: "raw" | "analyzed" | "failed" | null;
   risk_score?: number | null;
@@ -153,9 +156,9 @@ type I18nKey =
 
 const i18n: Record<Language, Record<I18nKey, string>> = {
   zh: {
-    subtitle: "全球情报监测",
+    subtitle: "出海经营风险雷达",
     collect: "采集",
-    analyze: "定位",
+    analyze: "轻量标记",
     refresh: "刷新",
     stop: "终止",
     allCountries: "全部国家",
@@ -167,7 +170,7 @@ const i18n: Record<Language, Record<I18nKey, string>> = {
     sortSeverity: "排序：严重度",
     desc: "降序",
     asc: "升序",
-    mapTitle: "情报地图",
+    mapTitle: "全球经营风险地图",
     low: "低",
     medium: "中",
     high: "高",
@@ -175,11 +178,11 @@ const i18n: Record<Language, Record<I18nKey, string>> = {
     cluster: "聚合",
     countryFocus: "国家聚焦",
     clear: "清除",
-    countryEmpty: "选择地图点查看国家级信号。",
-    briefTitle: "情报简报",
+    countryEmpty: "选择地图点查看国家/地区经营风险。",
+    briefTitle: "今日出海风险简报",
     loading: "加载中...",
-    mappedSignal: "个地图信号",
-    mappedSignals: "个地图信号",
+    mappedSignal: "个地图风险",
+    mappedSignals: "个地图风险",
     strategicRisk: "战略风险",
     totalEvents: "事件总数",
     totalClusters: "事件簇",
@@ -187,7 +190,7 @@ const i18n: Record<Language, Record<I18nKey, string>> = {
     highRisk: "高风险",
     countries: "国家数",
     noConvergence: "暂无收敛信号。",
-    events: "条情报",
+    events: "条经营风险",
     mixed: "混合",
     unknown: "未知",
     noSummary: "暂无摘要。",
@@ -198,23 +201,23 @@ const i18n: Record<Language, Record<I18nKey, string>> = {
     total: "总数",
     categories: "分类",
     dailyTrend: "每日趋势",
-    apiUnreachable: "API 无法连接",
-    collecting: "正在采集新闻...",
-    analyzing: "正在分析情报...",
-    analyzingOne: "正在分析这条情报...",
+    apiUnreachable: "后端未启动，请运行 start.bat 或启动 uvicorn backend.main:app --reload --port 8000",
+    collecting: "正在采集经营风险信息...",
+    analyzing: "正在进行轻量地图标记...",
+    analyzingOne: "正在生成这条事件的业务影响分析...",
     collectionDone: "采集完成",
     analysisDone: "地图定位完成",
     actionFailed: "操作失败",
     cancelling: "正在请求终止...",
     cancelRequested: "已请求终止",
-    analysisPanel: "情报分析",
-    clickMapPoint: "点击地图点开始单条分析。",
+    analysisPanel: "业务影响分析",
+    clickMapPoint: "点击地图点查看业务影响分析。",
     openOriginal: "打开原文",
     metricHint: "点击查看相关信号",
     metricSelected: "已聚焦指标",
   },
   en: {
-    subtitle: "Global Intelligence Monitor",
+    subtitle: "Trade Risk Radar",
     collect: "Collect",
     analyze: "Map Tags",
     refresh: "Refresh",
@@ -228,7 +231,7 @@ const i18n: Record<Language, Record<I18nKey, string>> = {
     sortSeverity: "Sort: Severity",
     desc: "Desc",
     asc: "Asc",
-    mapTitle: "Intelligence Map",
+    mapTitle: "Global Trade Risk Map",
     low: "Low",
     medium: "Medium",
     high: "High",
@@ -237,7 +240,7 @@ const i18n: Record<Language, Record<I18nKey, string>> = {
     countryFocus: "Country Focus",
     clear: "Clear",
     countryEmpty: "Select a map point to inspect country-level signals.",
-    briefTitle: "Intelligence Brief",
+    briefTitle: "Daily Trade Risk Brief",
     loading: "Loading...",
     mappedSignal: "mapped signal",
     mappedSignals: "mapped signals",
@@ -259,7 +262,7 @@ const i18n: Record<Language, Record<I18nKey, string>> = {
     total: "Total",
     categories: "Categories",
     dailyTrend: "Daily Trend",
-    apiUnreachable: "API unreachable",
+    apiUnreachable: "Backend is not running. Run start.bat or uvicorn backend.main:app --reload --port 8000",
     collecting: "Collecting news...",
     analyzing: "Analyzing intelligence...",
     analyzingOne: "Analyzing this signal...",
@@ -268,8 +271,8 @@ const i18n: Record<Language, Record<I18nKey, string>> = {
     actionFailed: "Action failed",
     cancelling: "Requesting stop...",
     cancelRequested: "Stop requested",
-    analysisPanel: "Signal Analysis",
-    clickMapPoint: "Click a map point to analyze one signal.",
+    analysisPanel: "Business Impact",
+    clickMapPoint: "Click a map point to inspect business impact.",
     openOriginal: "Open Original",
     metricHint: "Click to inspect related signals",
     metricSelected: "Metric focused",
@@ -286,8 +289,9 @@ appEl.innerHTML = `
   <main class="dashboard">
     <header class="topbar">
       <div>
-        <h1>WorldPulse Command</h1>
+        <h1>WorldPulse Trade</h1>
         <p data-i18n="subtitle">${t("subtitle")}</p>
+        <p class="product-copy">自动监控全球政策、物流、平台规则、战争制裁与市场波动，并转换成中文业务影响分析。</p>
       </div>
       <div class="actions">
         <select id="languageSelect" aria-label="Language">
@@ -347,6 +351,14 @@ appEl.innerHTML = `
         </div>
         <div id="countryDetail">${t("countryEmpty")}</div>
       </aside>
+      <aside class="panel keyword-panel">
+        <div class="country-head">
+          <h2>关键词关注</h2>
+          <button id="saveKeywordsBtn" class="tiny-btn">保存</button>
+        </div>
+        <textarea id="keywordInput" rows="5" spellcheck="false"></textarea>
+        <div id="keywordHitBox" class="keyword-hit">你关注的关键词今日命中 0 条事件</div>
+      </aside>
     </section>
     <aside class="floating-panel analysis-float open" id="analysisFloat">
       <div class="floating-head">
@@ -379,6 +391,9 @@ const closeAnalysisBtn = document.getElementById("closeAnalysisBtn") as HTMLButt
 const closeBriefBtn = document.getElementById("closeBriefBtn") as HTMLButtonElement;
 const mapCountEl = document.getElementById("mapCount") as HTMLSpanElement;
 const statusBarEl = document.getElementById("statusBar") as HTMLDivElement;
+const keywordInputEl = document.getElementById("keywordInput") as HTMLTextAreaElement;
+const keywordHitBoxEl = document.getElementById("keywordHitBox") as HTMLDivElement;
+const saveKeywordsBtn = document.getElementById("saveKeywordsBtn") as HTMLButtonElement;
 
 const languageSelectEl = document.getElementById("languageSelect") as HTMLSelectElement;
 const timeRangeEl = document.getElementById("timeRange") as HTMLSelectElement;
@@ -408,6 +423,7 @@ let hoverPopup: maplibregl.Popup | null = null;
 let activeAction: "/collect" | "/geotag" | null = null;
 let activeActionController: AbortController | null = null;
 let briefSortKey: "risk_score" | "last_seen" | "source_count" | "event_count" = "risk_score";
+const DEFAULT_KEYWORDS = ["Amazon", "TikTok Shop", "Temu", "关税", "美国海关", "红海", "DHL", "FedEx", "Shopee", "越南", "墨西哥"];
 
 const map = new maplibregl.Map({
   container: "map",
@@ -450,14 +466,24 @@ function statusText(value: string | null | undefined): string {
 
 function categoryText(value: string | null | undefined): string {
   const zh: Record<string, string> = {
-    politics: "政治",
-    conflict: "冲突",
-    finance: "金融",
-    disaster: "灾害",
-    technology: "科技",
-    society: "社会",
-    health: "健康",
-    energy: "能源",
+    tariff_policy: "关税政策",
+    customs_clearance: "海关清关",
+    logistics_delay: "物流延误",
+    port_disruption: "港口/航运中断",
+    platform_policy: "平台规则",
+    sanctions_conflict: "制裁/冲突",
+    currency_oil: "汇率/油价",
+    supply_chain: "供应链",
+    market_demand: "市场需求",
+    compliance: "合规监管",
+    politics: "政策",
+    conflict: "制裁/冲突",
+    finance: "汇率/油价",
+    disaster: "物流中断",
+    technology: "供应链",
+    society: "市场需求",
+    health: "合规监管",
+    energy: "汇率/油价",
     other: "其他",
     world: "国际",
   };
@@ -471,6 +497,26 @@ function categoriesText(values: string[]): string {
 
 function locationText(country: string | null | undefined, city: string | null | undefined): string {
   return `${country || t("unknown")} · ${city || "无城市"}`;
+}
+
+function affectedGroupsText(value: EventItem["affected_groups"]): string {
+  if (Array.isArray(value)) return value.join("、");
+  if (!value) return "跨境电商卖家、外贸企业、物流货代";
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed.join("、");
+  } catch {
+    // Keep plain strings from older API responses.
+  }
+  return value;
+}
+
+function businessImpactText(event: EventItem): string {
+  return event.business_impact || "该事件可能影响相关地区的跨境经营，请点击分析获取具体影响。";
+}
+
+function suggestedActionText(event: EventItem): string {
+  return event.suggested_action || "建议先关注物流渠道、清关资料、平台公告和利润测算变化。";
 }
 
 function displayTitle(event: EventItem): string {
@@ -560,12 +606,12 @@ function showStatus(message: string, tone: "idle" | "working" | "success" | "err
 
 function renderMetrics(metrics: Metrics): void {
   const cards = [
-    { action: "all", label: "全部信号", value: metrics.total_events.toString(), hint: "清空所有筛选，恢复全局地图", level: "calm" },
+    { action: "all", label: "经营风险", value: metrics.total_events.toString(), hint: "清空筛选，恢复全球经营风险地图", level: "calm" },
     { action: "high-risk", label: "高风险", value: metrics.high_risk_events.toString(), hint: "只显示高风险和严重风险事件", level: metrics.high_risk_events > 0 ? "hot" : "calm" },
-    { action: "finance", label: "金融事件", value: "金融", hint: "只显示金融、市场、能源价格相关事件", level: "watch" },
-    { action: "conflict", label: "冲突事件", value: "冲突", hint: "只显示战争、袭击、军事相关事件", level: "hot" },
-    { action: "clusters", label: "事件簇", value: metrics.total_clusters.toString(), hint: "开启聚合模式，按事件簇查看", level: "calm" },
-    { action: "countries", label: "国家视图", value: metrics.unique_countries.toString(), hint: "清空筛选并缩放到所有涉及国家", level: "watch" },
+    { action: "logistics", label: "物流/港口", value: "物流", hint: "聚焦物流延误、港口罢工、航运中断", level: "watch" },
+    { action: "platform", label: "平台规则", value: "平台", hint: "聚焦 Amazon、TikTok Shop、Temu、Shopee 等平台规则", level: "calm" },
+    { action: "clusters", label: "风险簇", value: metrics.total_clusters.toString(), hint: "开启聚合模式，按国家和业务分类查看", level: "calm" },
+    { action: "countries", label: "涉及国家", value: metrics.unique_countries.toString(), hint: "清空筛选并缩放到所有涉及国家", level: "watch" },
   ];
   metricsEl.innerHTML = cards
     .map(
@@ -645,9 +691,9 @@ async function applyMetricAction(action: string): Promise<void> {
     return;
   }
 
-  if (action === "finance") {
+  if (action === "logistics") {
     resetSignalFilters();
-    setSelectValue(categoryFilterEl, "finance");
+    setSelectValue(categoryFilterEl, "logistics_delay");
     layerLowEl.checked = true;
     layerMediumEl.checked = true;
     layerHighEl.checked = true;
@@ -656,13 +702,13 @@ async function applyMetricAction(action: string): Promise<void> {
     sortOrderEl.value = "desc";
     await loadDashboard();
     fitMapToEvents();
-    showStatus("已筛选金融相关事件", "success");
+    showStatus("已筛选物流延误相关事件", "success");
     return;
   }
 
-  if (action === "conflict") {
+  if (action === "platform") {
     resetSignalFilters();
-    setSelectValue(categoryFilterEl, "conflict");
+    setSelectValue(categoryFilterEl, "platform_policy");
     sortByEl.value = "severity";
     sortOrderEl.value = "desc";
     layerLowEl.checked = false;
@@ -671,7 +717,7 @@ async function applyMetricAction(action: string): Promise<void> {
     layerCriticalEl.checked = true;
     await loadDashboard();
     fitMapToEvents();
-    showStatus("已筛选冲突相关事件", "success");
+    showStatus("已筛选平台规则相关事件", "success");
     return;
   }
 
@@ -724,9 +770,9 @@ function renderConvergences(convergences: BriefResponse["convergences"]): void {
     .join("");
 }
 
-function renderBriefTable(clusters: EventItem[] = []): void {
+function renderBriefTable(clusters: EventItem[] = [], briefText = ""): void {
   if (!clusters.length) {
-    briefEl.innerHTML = `<div class="brief-empty">暂无可展示的事件簇。</div>`;
+    briefEl.innerHTML = `<pre class="brief-copy">${briefText || "暂无可展示的风险简报。"}</pre><div class="brief-empty">暂无可展示的事件簇。</div>`;
     return;
   }
   const sorted = [...clusters].sort((a, b) => {
@@ -737,12 +783,13 @@ function renderBriefTable(clusters: EventItem[] = []): void {
   });
 
   briefEl.innerHTML = `
+    <pre class="brief-copy">${briefText}</pre>
     <table class="brief-table">
       <thead>
         <tr>
           <th><button data-sort="risk_score">风险</button></th>
           <th>地点</th>
-          <th>事件</th>
+          <th>经营风险</th>
           <th><button data-sort="source_count">来源</button></th>
           <th><button data-sort="event_count">报道</button></th>
           <th><button data-sort="last_seen">时间</button></th>
@@ -756,7 +803,7 @@ function renderBriefTable(clusters: EventItem[] = []): void {
             <td><span class="risk-chip" style="background:${riskColor(item.risk_level)}">${riskText(item.risk_level)}</span><b>${item.risk_score || 0}</b></td>
             <td>${item.country || t("unknown")}<small>${item.city || "无城市"}</small></td>
             <td><strong>${displayTitle(item)}</strong><small>${categoryText(item.category)}</small></td>
-            <td>${item.source_count || 1}<small>权威源 ${item.rss_count || 0} / 全球骨架 ${item.gdelt_count || 0}</small></td>
+            <td>${item.source_count || 1}<small>RSS ${item.rss_count || 0} / GDELT ${item.gdelt_count || 0}</small></td>
             <td>${item.event_count || 1}</td>
             <td>${item.last_seen ? new Date(item.last_seen).toLocaleDateString() : "未知"}</td>
           </tr>
@@ -829,6 +876,8 @@ function renderMap(events: EventItem[]): void {
 function renderAnalysisDetail(event: EventItem, isLoading = false): void {
   analysisFloatEl.classList.add("open");
   const summary = event.ai_summary || event.summary || event.raw_summary || t("noSummary");
+  const impact = businessImpactText(event);
+  const action = suggestedActionText(event);
   analysisDetailEl.innerHTML = `
       <div class="analysis-card">
       <div class="event-header">
@@ -840,10 +889,13 @@ function renderAnalysisDetail(event: EventItem, isLoading = false): void {
       ${displayTitle(event) !== event.title ? `<div class="original-title">${event.title}</div>` : ""}
       <p>${isLoading ? t("analyzingOne") : summary}</p>
       <div class="analysis-meta">
-        <span>${locationText(event.country, event.city)}</span>
-        <span>${categoryText(event.category)} · 严重度 ${event.severity || 1}</span>
+        <span>国家/城市：${locationText(event.country, event.city)}</span>
+        <span>业务分类：${categoryText(event.category)} · 严重度 ${event.severity || 1}</span>
+        <span>影响对象：${affectedGroupsText(event.affected_groups)}</span>
         ${typeof event.confidence === "number" ? `<span>置信度 ${Math.round(event.confidence * 100)}%</span>` : ""}
       </div>
+      <div class="analysis-note"><strong>可能影响</strong><br/>${impact}</div>
+      <div class="analysis-note"><strong>建议动作</strong><br/>${action}</div>
       ${event.location_reason ? `<div class="analysis-note">${event.location_reason}</div>` : ""}
       ${event.social_angle ? `<div class="analysis-note">${event.social_angle}</div>` : ""}
       <a class="analysis-link" href="${event.url}" target="_blank" rel="noopener noreferrer">${t("openOriginal")}</a>
@@ -1073,6 +1125,7 @@ function statusLabel(value: string): string {
 function optionLabel(selectEl: HTMLSelectElement, value: string): string {
   if (selectEl === riskFilterEl) return riskLabel(value);
   if (selectEl === statusFilterEl) return statusLabel(value);
+  if (selectEl === categoryFilterEl) return categoryText(value);
   return value;
 }
 
@@ -1086,6 +1139,38 @@ function renderMapCount(total: number): void {
   mapCountEl.textContent = currentLanguage === "zh"
     ? `${total} ${t("mappedSignals")}`
     : `${total} ${total === 1 ? t("mappedSignal") : t("mappedSignals")}`;
+}
+
+function loadKeywords(): string[] {
+  const saved = localStorage.getItem("worldpulse-trade-keywords");
+  if (!saved) return DEFAULT_KEYWORDS;
+  return saved
+    .split(/\n|,/)
+    .map((keyword) => keyword.trim())
+    .filter(Boolean);
+}
+
+function saveKeywords(): void {
+  const keywords = keywordInputEl.value
+    .split(/\n|,/)
+    .map((keyword) => keyword.trim())
+    .filter(Boolean);
+  localStorage.setItem("worldpulse-trade-keywords", keywords.join("\n"));
+  renderKeywordHits(latestRenderedEvents);
+  showStatus("关键词关注已保存", "success");
+}
+
+function renderKeywordHits(events: EventItem[]): void {
+  const keywords = loadKeywords();
+  keywordInputEl.value = keywords.join("\n");
+  const matched = events.filter((event) => {
+    const text = `${event.title || ""} ${event.raw_summary || ""} ${event.ai_summary || ""} ${event.summary || ""}`.toLowerCase();
+    return keywords.some((keyword) => text.includes(keyword.toLowerCase()));
+  });
+  const hitKeywords = keywords.filter((keyword) =>
+    matched.some((event) => `${event.title || ""} ${event.raw_summary || ""} ${event.ai_summary || ""} ${event.summary || ""}`.toLowerCase().includes(keyword.toLowerCase())),
+  );
+  keywordHitBoxEl.innerHTML = `你关注的关键词今日命中 <strong>${matched.length}</strong> 条事件${hitKeywords.length ? `<br/><span>${hitKeywords.slice(0, 8).join("、")}</span>` : ""}`;
 }
 
 function updateStaticLanguage(): void {
@@ -1137,10 +1222,11 @@ async function loadDashboard(): Promise<void> {
       fetchJson<MapEventsResponse>(`/map-events?${buildSignalQuery()}`),
     ]);
     renderMetrics(metrics);
-    renderBriefTable(brief.clusters || []);
+    renderBriefTable(brief.clusters || [], brief.brief);
     briefFloatEl.classList.add("open");
     renderConvergences(brief.convergences);
     renderMap(mapEvents.items);
+    renderKeywordHits(mapEvents.items);
     latestMapTotal = mapEvents.total;
     renderMapCount(mapEvents.total);
     if (activeCountry) {
@@ -1149,7 +1235,8 @@ async function loadDashboard(): Promise<void> {
       countryDetailEl.innerHTML = t("countryEmpty");
     }
   } catch (error) {
-    briefEl.textContent = `${t("apiUnreachable")}: ${(error as Error).message}`;
+    briefEl.textContent = `${t("apiUnreachable")}。${(error as Error).message}`;
+    showStatus(t("apiUnreachable"), "error");
   }
 }
 
@@ -1204,6 +1291,7 @@ collectBtn.addEventListener("click", () => void runAction("/collect"));
 analyzeBtn.addEventListener("click", () => void runAction("/geotag"));
 cancelBtn.addEventListener("click", () => void cancelActiveAction());
 refreshBtn.addEventListener("click", () => void loadDashboard());
+saveKeywordsBtn.addEventListener("click", saveKeywords);
 
 timeRangeEl.addEventListener("change", () => {
   void loadFilters().then(loadDashboard);
@@ -1230,5 +1318,6 @@ clearCountryBtn.addEventListener("click", () => {
   });
 });
 
+keywordInputEl.value = loadKeywords().join("\n");
 updateStaticLanguage();
 void loadFilters().then(loadDashboard);

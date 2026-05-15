@@ -1,6 +1,5 @@
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut
-import time
 from db.database import Database
 
 class GeocoderService:
@@ -9,6 +8,11 @@ class GeocoderService:
         self.geolocator = Nominatim(user_agent="worldpulse_ai")
 
     def get_coordinates(self, country, city=None):
+        if not country:
+            return None, None
+        if isinstance(country, str) and any(separator in country for separator in [",", "，", "/", "、"]):
+            return None, None
+
         location_name = f"{city}, {country}" if city else country
         
         # Check cache

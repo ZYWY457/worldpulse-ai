@@ -24,6 +24,7 @@ class Database:
                     url TEXT UNIQUE,
                     source TEXT,
                     source_type TEXT,
+                    source_weight REAL,
                     published_at DATETIME,
                     raw_summary TEXT,
                     raw_content TEXT,
@@ -31,17 +32,58 @@ class Database:
                     category TEXT,
                     country TEXT,
                     city TEXT,
+                    location_scope TEXT,
+                    location_confidence REAL,
+                    location_reason TEXT,
                     lat REAL,
                     lon REAL,
                     severity INTEGER,
                     confidence REAL,
                     risk_level TEXT,
+                    affected_groups TEXT,
+                    business_impact TEXT,
+                    suggested_action TEXT,
                     social_angle TEXT,
                     status TEXT DEFAULT 'raw',
                     created_at DATETIME,
                     updated_at DATETIME
                 )
             ''')
+            self._ensure_column(cursor, "events", "source_weight", "REAL")
+            self._ensure_column(cursor, "events", "location_scope", "TEXT")
+            self._ensure_column(cursor, "events", "location_confidence", "REAL")
+            self._ensure_column(cursor, "events", "location_reason", "TEXT")
+            self._ensure_column(cursor, "events", "cluster_id", "TEXT")
+            self._ensure_column(cursor, "events", "affected_groups", "TEXT")
+            self._ensure_column(cursor, "events", "business_impact", "TEXT")
+            self._ensure_column(cursor, "events", "suggested_action", "TEXT")
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS event_clusters (
+                    id TEXT PRIMARY KEY,
+                    title TEXT,
+                    url TEXT,
+                    source TEXT,
+                    category TEXT,
+                    country TEXT,
+                    city TEXT,
+                    lat REAL,
+                    lon REAL,
+                    severity INTEGER,
+                    risk_level TEXT,
+                    risk_score REAL,
+                    event_count INTEGER,
+                    source_count INTEGER,
+                    gdelt_count INTEGER,
+                    rss_count INTEGER,
+                    source_weight_sum REAL,
+                    first_seen DATETIME,
+                    last_seen DATETIME,
+                    summary TEXT,
+                    updated_at DATETIME
+                )
+            ''')
+            self._ensure_column(cursor, "event_clusters", "url", "TEXT")
+            self._ensure_column(cursor, "event_clusters", "source", "TEXT")
             # Geocode cache table
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS geocode_cache (
@@ -55,6 +97,12 @@ class Database:
             ''')
             conn.commit()
 
+    def _ensure_column(self, cursor, table_name, column_name, column_type):
+        cursor.execute(f"PRAGMA table_info({table_name})")
+        columns = {row[1] for row in cursor.fetchall()}
+        if column_name not in columns:
+            cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
+
     def save_event(self, event_data):
         with self.get_connection() as conn:
             cursor = conn.cursor()
@@ -66,8 +114,8 @@ class Database:
                 return False
             
             fields = [
-                'id', 'title', 'url', 'source', 'source_type', 'published_at', 
-                'raw_summary', 'status', 'created_at', 'updated_at'
+                'id', 'title', 'url', 'source', 'source_type', 'source_weight', 'published_at',
+                'raw_summary', 'category', 'status', 'created_at', 'updated_at'
             ]
             placeholders = ', '.join(['?'] * len(fields))
             values = [
@@ -76,8 +124,10 @@ class Database:
                 event_data.get('url'),
                 event_data.get('source'),
                 event_data.get('source_type', 'rss'),
+                event_data.get('source_weight', 0.7),
                 event_data.get('published_at'),
                 event_data.get('raw_summary'),
+                event_data.get('category'),
                 'raw',
                 now,
                 now
@@ -92,6 +142,57 @@ class Database:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM events WHERE status = 'raw' ORDER BY published_at DESC LIMIT ?", (limit,))
             return [dict(row) for row in cursor.fetchall()]
+
+    def get_unmapped_events(self, limit=50):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT * FROM events
+                WHERE status = 'raw'
+                  AND lat IS NULL
+                  AND lon IS NULL
+                ORDER BY published_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            )
+            return [dict(row) for row in cursor.fetchall()]
+
+    def get_event(self, event_id):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM events WHERE id = ?", (event_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    def update_event_fields(self, event_id, field_data, status=None):
+        allowed_fields = {
+            'ai_summary', 'category', 'country', 'city', 'location_scope',
+            'location_confidence', 'location_reason', 'lat', 'lon', 'severity',
+            'confidence', 'risk_level', 'social_angle', 'cluster_id',
+            'affected_groups', 'business_impact', 'suggested_action'
+        }
+        updates = {k: v for k, v in field_data.items() if k in allowed_fields}
+        if not updates and status is None:
+            return
+
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            now = datetime.now().isoformat()
+            update_fields = []
+            values = []
+            for key, value in updates.items():
+                update_fields.append(f"{key} = ?")
+                values.append(value)
+            update_fields.append("updated_at = ?")
+            values.append(now)
+            if status is not None:
+                update_fields.append("status = ?")
+                values.append(status)
+            values.append(event_id)
+            cursor.execute(f"UPDATE events SET {', '.join(update_fields)} WHERE id = ?", values)
+            conn.commit()
 
     def update_event_analysis(self, event_id, analysis_data):
         with self.get_connection() as conn:
