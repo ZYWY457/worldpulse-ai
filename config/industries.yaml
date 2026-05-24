@@ -1,0 +1,71 @@
+industries:
+  overview:
+    id: overview
+    name_zh: 总览
+    name_en: Overview
+    description: 综合全球新闻、政策、市场、科技、供应链和地缘事件。
+    default_keywords: [突发, 政策, 市场, 科技, 供应链, 战争, 制裁, 油价, 汇率, AI]
+    categories: [全球事件, 政策变化, 市场波动, 科技进展, 供应链风险, 地缘安全, 社会议题]
+    risk_focus: 综合重要性、跨地区影响、行业外溢风险和信息热度。
+    analysis_focus: 用普通经营者能理解的语言说明事件为什么重要、可能影响哪些行业、后续看什么。
+    suggested_actions: 关注后续确认信息、识别受影响行业、更新风险观察清单。
+  trade:
+    id: trade
+    name_zh: 出海贸易
+    name_en: Trade
+    description: 面向跨境电商、外贸、物流和出海团队。
+    default_keywords: [Amazon, TikTok Shop, Temu, Shopee, 关税, 清关, 港口, DHL, FedEx, 红海]
+    categories: [关税政策, 海关清关, 物流延误, 平台规则, 供应链中断, 汇率油价]
+    risk_focus: 关税、清关、物流、港口、平台规则、汇率、制裁。
+    analysis_focus: 说明对卖家、外贸、货代、海外仓和出海团队的成本、时效、合规与利润影响。
+    suggested_actions: 复核 HS Code、检查物流渠道、关注平台公告、重新计算利润、调整备货。
+  finance:
+    id: finance
+    name_zh: 金融市场
+    name_en: Finance
+    description: 面向投资者、财经内容创作者和市场观察者。
+    default_keywords: [美联储, 利率, CPI, 油价, 黄金, 美元, 股市, 债券, 比特币]
+    categories: [央行政策, 汇率波动, 商品价格, 股市风险, 地缘冲击, 加密市场]
+    risk_focus: 利率、汇率、油价、黄金、股票市场、央行政策、地缘冲突对市场影响。
+    analysis_focus: 说明可能影响的资产类别、价格传导、风险偏好变化和观察指标。
+    suggested_actions: 跟踪数据确认、控制仓位风险、比较多资产反应、注明不构成投资建议。
+  tech:
+    id: tech
+    name_zh: 科技 AI
+    name_en: Tech AI
+    description: 面向 AI 从业者、开发者、创业者和科技媒体。
+    default_keywords: [OpenAI, NVIDIA, AI芯片, 开源模型, 数据中心, 云服务, 监管, 融资]
+    categories: [AI 模型, 芯片限制, 开源项目, 科技监管, 融资并购, 云服务, 数据中心]
+    risk_focus: AI 模型、芯片、开源项目、科技监管、融资、云服务、数据中心。
+    analysis_focus: 说明对开发者、创业公司、算力、模型生态和科技竞争格局的影响。
+    suggested_actions: 关注技术路线、评估供应商依赖、检查合规要求、寻找产品和内容机会。
+  supply_chain:
+    id: supply_chain
+    name_zh: 供应链工业
+    name_en: Supply Chain
+    description: 面向制造业、工厂、贸易商、采购和工业企业。
+    default_keywords: [锂, 铜, 稀土, 石油, 天然气, 航运, 港口, 工厂, 矿山]
+    categories: [原材料价格, 能源供应, 运输中断, 港口风险, 矿产资源, 工厂停摆, 产能变化]
+    risk_focus: 原材料、能源、运输、港口、矿产、制裁、产能、工厂停摆。
+    analysis_focus: 说明对原材料、产能、采购周期、运输路径和替代供应的影响。
+    suggested_actions: 锁定关键物料、寻找替代供应商、调整安全库存、复核运输方案。
+  geopolitics:
+    id: geopolitics
+    name_zh: 地缘安全
+    name_en: Geopolitics
+    description: 面向政策研究、风险顾问和企业风控。
+    default_keywords: [制裁, 战争, 军事, 外交, 抗议, 边境, 导弹, 停火]
+    categories: [战争冲突, 制裁出口管制, 外交关系, 军事行动, 抗议动荡, 国家风险]
+    risk_focus: 战争、制裁、军事、外交、抗议、恐袭、国家风险。
+    analysis_focus: 说明国家风险、冲突升级路径、制裁外溢和企业风控关注点。
+    suggested_actions: 更新国家风险清单、检查制裁暴露、准备人员和资产安全预案。
+  content:
+    id: content
+    name_zh: 内容创作
+    name_en: Content
+    description: 面向财经博主、新闻号和自媒体运营。
+    default_keywords: [爆火, 争议, 突发, 反转, 影响, 普通人, 价格上涨, 机会]
+    categories: [热点事件, 争议话题, 选题价值, 短视频脚本, 情绪传播, 普通人影响]
+    risk_focus: 热点强度、争议性、传播角度、短视频脚本、选题价值。
+    analysis_focus: 提炼内容角度、标题方向、普通人关联和可传播冲突点。
+    suggested_actions: 判断选题热度、准备标题钩子、制作短视频口播、避免夸大事实。

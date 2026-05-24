@@ -2,6 +2,7 @@ import re
 from html import unescape
 
 from db.database import Database
+from services.category_validator import CategoryValidator
 from services.geocoder import GeocoderService
 
 
@@ -10,6 +11,7 @@ class RuleBasedGeotagger:
         self.db = db
         self.task_control = task_control
         self.geocoder = GeocoderService(db)
+        self.category_validator = CategoryValidator()
         self.locations = self._build_locations()
 
     def geotag_unmapped(self, limit=200):
@@ -70,6 +72,9 @@ class RuleBasedGeotagger:
         if lat is None or lon is None:
             return None
 
+        category = event.get("category") or self._infer_category(text)
+        category, status = self.category_validator.validate(category, event.get("title"), event.get("raw_summary"))
+
         return {
             "country": match["country"],
             "city": match.get("city"),
@@ -77,8 +82,8 @@ class RuleBasedGeotagger:
             "lon": lon,
             "location_scope": "specific",
             "location_confidence": match["confidence"],
-            "location_reason": f"Rule match: {match['alias']}",
-            "category": event.get("category") or self._infer_category(text),
+            "location_reason": f"Rule match: {match['alias']} | category_validation={status}",
+            "category": category,
             "severity": self._infer_severity(text),
             "risk_level": self._infer_risk_level(text),
         }

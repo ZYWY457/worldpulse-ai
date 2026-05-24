@@ -146,3 +146,101 @@ gdelt:
   queries:
     - category: world
       query: '(war OR conflict OR missile OR drone OR attack OR military OR ceasefire OR election OR protest OR sanctions OR coup OR "state of emergency" OR diplomacy OR inflation OR recession OR "central bank" OR oil OR trade OR earthquake OR flood OR wildfire OR hurricane OR outbreak OR epidemic OR cybersecurity OR semiconductor OR "data breach")'
+
+crawler_static:
+  # --- Trade / Customs / Sanctions ---
+  - name: USTR Press Releases
+    type: crawler_static
+    source_pack: trade
+    industry_tags: [trade, geopolitics, supply_chain]
+    category: tariff_policy
+    source_weight: 0.93
+    url: https://ustr.gov/about-us/policy-offices/press-office/press-releases
+    item_selector: ".view-content .views-row, article, li"
+    title_selector: "a, h2, h3"
+    link_selector: "a[href]"
+    date_selector: "time, .date-display-single, .field-content"
+    summary_selector: "p"
+    include_keywords: [tariff, trade, duty, import, customs, policy, enforcement]
+    exclude_keywords: [cookie, privacy, newsletter, navigation]
+    max_items: 20
+    enabled: true
+    crawl_interval_minutes: 360
+    robots_note: "Public press release index; low-frequency fetch."
+
+  - name: CBP Newsroom
+    type: crawler_static
+    source_pack: trade
+    industry_tags: [trade, supply_chain, geopolitics]
+    category: customs_clearance
+    source_weight: 0.92
+    url: https://www.cbp.gov/newsroom
+    item_selector: "article, .views-row, li"
+    title_selector: "a, h2, h3"
+    link_selector: "a[href]"
+    date_selector: "time, .date-display-single, .datetime"
+    summary_selector: "p"
+    include_keywords: [customs, border, import, enforcement, seizure, trade, cargo]
+    exclude_keywords: [cookie, privacy, newsletter, navigation]
+    max_items: 20
+    enabled: true
+    crawl_interval_minutes: 360
+    robots_note: "Public newsroom index; low-frequency fetch."
+
+  - name: OFAC Recent Actions
+    type: crawler_static
+    source_pack: trade
+    industry_tags: [trade, finance, geopolitics, supply_chain]
+    category: sanctions_conflict
+    source_weight: 0.95
+    url: https://ofac.treasury.gov/recent-actions
+    item_selector: ".view-content .views-row, article, li"
+    title_selector: "a, h2, h3"
+    link_selector: "a[href]"
+    date_selector: "time, .date, .field-content"
+    summary_selector: "p"
+    include_keywords: [sanctions, designation, blocked, treasury, enforcement, russia, iran]
+    exclude_keywords: [cookie, privacy, newsletter, navigation]
+    max_items: 20
+    enabled: true
+    crawl_interval_minutes: 360
+    robots_note: "Public recent actions page; low-frequency fetch."
+
+  # --- Logistics / Service Alerts ---
+  - name: DHL Service Alerts
+    type: crawler_static
+    source_pack: trade
+    industry_tags: [trade, supply_chain]
+    category: logistics_delay
+    source_weight: 0.88
+    url: https://www.dhl.com/global-en/home/important-information.html
+    item_selector: "article, .cmp-container, li"
+    title_selector: "a, h2, h3, h4"
+    link_selector: "a[href]"
+    date_selector: "time, .date"
+    summary_selector: "p"
+    include_keywords: [service, alert, delay, disruption, shipment, delivery, transit]
+    exclude_keywords: [cookie, privacy, newsletter, navigation]
+    max_items: 15
+    enabled: true
+    crawl_interval_minutes: 180
+    robots_note: "Public service information page; low-frequency fetch."
+
+  - name: FedEx Service Alerts
+    type: crawler_static
+    source_pack: trade
+    industry_tags: [trade, supply_chain]
+    category: logistics_delay
+    source_weight: 0.88
+    url: https://www.fedex.com/en-us/service-alerts.html
+    item_selector: "article, .fxg-alert, .card, li"
+    title_selector: "a, h2, h3, h4"
+    link_selector: "a[href]"
+    date_selector: "time, .date"
+    summary_selector: "p"
+    include_keywords: [service, alert, delay, disruption, shipment, delivery, transit]
+    exclude_keywords: [cookie, privacy, newsletter, navigation]
+    max_items: 15
+    enabled: true
+    crawl_interval_minutes: 180
+    robots_note: "Public service alert page; low-frequency fetch."

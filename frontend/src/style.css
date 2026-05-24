@@ -57,6 +57,39 @@ body {
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.llm-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f7f5ee;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.llm-status.ok {
+  border-color: #b8d8c4;
+  background: #eef8f1;
+  color: #1f6f3b;
+}
+
+.llm-status.warn {
+  border-color: #f2d7a8;
+  background: #fff8e8;
+  color: #9b6a00;
+}
+
+.llm-status.error {
+  border-color: #efb8b8;
+  background: #fff0f0;
+  color: #9e1c1c;
 }
 
 .filters {
@@ -64,6 +97,27 @@ body {
   grid-template-columns: repeat(6, minmax(120px, 1fr));
   gap: 10px;
   margin-bottom: 12px;
+}
+
+.industry-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.industry-tabs button {
+  padding: 7px 10px;
+  background: #fffdfa;
+}
+
+.industry-tabs button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
 }
 
 button,
@@ -92,6 +146,12 @@ button:hover {
 .danger-btn:not(:disabled):hover {
   border-color: #d62828;
   background: #fff0f0;
+}
+
+.active-profile {
+  border-color: #2a9d8f;
+  background: #eef8f1;
+  color: #1f6f3b;
 }
 
 button:disabled,
@@ -143,6 +203,104 @@ select:disabled {
   border-color: #efb8b8;
   background: #fff0f0;
   color: #9e1c1c;
+}
+
+.profile-panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 12px;
+  margin: -4px 0 12px;
+}
+
+.llm-config-panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 12px;
+  margin: -4px 0 12px;
+}
+
+.llm-config-panel h2 {
+  margin: 0;
+  font-size: 15px;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+}
+
+.llm-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(200px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.llm-grid input {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fffdfa;
+  color: var(--ink);
+  padding: 8px;
+  font-size: 13px;
+}
+
+.profile-head,
+.profile-editor {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.profile-head {
+  margin-bottom: 8px;
+}
+
+.profile-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+}
+
+.profile-editor textarea {
+  flex: 1;
+  min-height: 70px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fffdfa;
+  color: var(--ink);
+  padding: 8px;
+  line-height: 1.45;
+}
+
+.profile-summary {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.profile-summary strong,
+.profile-summary span,
+.profile-summary small {
+  display: block;
+}
+
+.profile-summary strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.relevance-badge {
+  display: inline-block;
+  width: fit-content;
+  margin-top: 4px;
+  border: 1px solid #b8d8c4;
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: #eef8f1;
+  color: #1f6f3b;
+  font-size: 11px;
 }
 
 @keyframes spin {
@@ -410,6 +568,50 @@ select:disabled {
   font-size: 12px;
   line-height: 1.55;
   color: #2d3142;
+}
+
+.relevant-brief {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.relevant-brief h3 {
+  margin: 0;
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.relevant-row {
+  width: 100%;
+  text-align: left;
+  border: 1px solid #b8d8c4;
+  border-radius: 6px;
+  background: #eef8f1;
+  padding: 8px;
+}
+
+.relevant-row b,
+.relevant-row span,
+.relevant-row small {
+  display: block;
+  line-height: 1.35;
+}
+
+.relevant-row b {
+  font-size: 12px;
+}
+
+.relevant-row span {
+  margin-top: 3px;
+  color: #1f6f3b;
+  font-size: 11px;
+}
+
+.relevant-row small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
 }
 
 .brief-table {
@@ -825,6 +1027,11 @@ select:disabled {
 
   .metrics {
     grid-template-columns: repeat(2, minmax(140px, 1fr));
+  }
+
+  .profile-editor {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .map-workspace {

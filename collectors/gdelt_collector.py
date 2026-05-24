@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import time
 from datetime import datetime
 from urllib.parse import urlparse
 
@@ -68,6 +69,8 @@ class GDELTCollector:
                 url = article.get("url")
                 if not url or url in seen_urls:
                     continue
+                if not self._is_quality_article(article):
+                    continue
                 seen_urls.add(url)
 
                 event_data = self._article_to_event(article, category, config.get("source_weight", 0.55))
@@ -78,6 +81,19 @@ class GDELTCollector:
 
         logger.info(f"GDELT collection finished. Added {total_new} new events.")
         return total_new
+
+    def _is_quality_article(self, article):
+        title = str(article.get("title") or "").strip()
+        if len(title) < 18:
+            return False
+        lower = title.lower()
+        junk_phrases = ["click here", "watch live", "sponsored", "photo gallery", "newsletter", "sign up"]
+        if any(phrase in lower for phrase in junk_phrases):
+            return False
+        has_letters = any(ch.isalpha() for ch in title)
+        if not has_letters:
+            return False
+        return True
 
     def _fetch_articles(self, query, timespan, max_records, sort):
         if self._is_cancelled():
@@ -91,20 +107,63 @@ class GDELTCollector:
             "maxrecords": max_records,
             "sort": sort,
         }
+        started = time.perf_counter()
         try:
             response = requests.get(self.api_url, params=params, headers=self.headers, timeout=self.timeout)
             response.raise_for_status()
             data = response.json()
             articles = data.get("articles", [])
+            self.db.record_source_health({
+                "source_name": f"GDELT:{query[:60]}",
+                "source_type": "gdelt",
+                "endpoint": self.api_url,
+                "status": "ok",
+                "latency_ms": int((time.perf_counter() - started) * 1000),
+                "http_code": response.status_code,
+                "fetched_count": len(articles) if isinstance(articles, list) else 0,
+                "accepted_count": len(articles) if isinstance(articles, list) else 0,
+            })
             return articles if isinstance(articles, list) else []
         except requests.exceptions.Timeout:
             logger.warning(f"GDELT query timed out and was skipped: {query}")
+            self.db.record_source_health({
+                "source_name": f"GDELT:{query[:60]}",
+                "source_type": "gdelt",
+                "endpoint": self.api_url,
+                "status": "timeout",
+                "latency_ms": int((time.perf_counter() - started) * 1000),
+                "error_message": "timeout",
+            })
         except requests.exceptions.RequestException as e:
             logger.warning(f"GDELT query failed and was skipped: {query}: {e}")
+            self.db.record_source_health({
+                "source_name": f"GDELT:{query[:60]}",
+                "source_type": "gdelt",
+                "endpoint": self.api_url,
+                "status": "request_error",
+                "latency_ms": int((time.perf_counter() - started) * 1000),
+                "error_message": str(e),
+            })
         except ValueError as e:
             logger.warning(f"GDELT returned invalid JSON for query '{query}': {e}")
+            self.db.record_source_health({
+                "source_name": f"GDELT:{query[:60]}",
+                "source_type": "gdelt",
+                "endpoint": self.api_url,
+                "status": "invalid_json",
+                "latency_ms": int((time.perf_counter() - started) * 1000),
+                "error_message": str(e),
+            })
         except Exception as e:
-            logger.error(f"Unexpected GDELT collection error for query '{query}': {e}")
+            logger.exception("gdelt_collect_error", extra={"query": query})
+            self.db.record_source_health({
+                "source_name": f"GDELT:{query[:60]}",
+                "source_type": "gdelt",
+                "endpoint": self.api_url,
+                "status": "exception",
+                "latency_ms": int((time.perf_counter() - started) * 1000),
+                "error_message": str(e),
+            })
 
         return []
 
@@ -118,7 +177,7 @@ class GDELTCollector:
         language = article.get("language") or "Unknown"
         source_country = article.get("sourcecountry") or "Unknown"
         published_at = self._parse_seen_date(article.get("seendate"))
-        raw_summary = f"Language: {language}. Source country: {source_country}. Domain: {domain}."
+        raw_summary = f"Title from {domain}. Language={language}. SourceCountry={source_country}."
 
         return {
             "id": event_id,

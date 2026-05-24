@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-echo [WorldPulse Trade] Installing Python dependencies...
+echo [WorldPulse Radar] Installing Python dependencies...
 if not exist ".venv\Scripts\python.exe" (
   python -m venv .venv
 )
@@ -10,7 +10,7 @@ call .venv\Scripts\activate.bat
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 
-echo [WorldPulse Trade] Installing frontend dependencies...
+echo [WorldPulse Radar] Installing frontend dependencies...
 cd frontend
 npm install
 cd ..

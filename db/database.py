@@ -40,9 +40,14 @@ class Database:
                     severity INTEGER,
                     confidence REAL,
                     risk_level TEXT,
+                    industry TEXT,
+                    industry_tags TEXT,
                     affected_groups TEXT,
                     business_impact TEXT,
+                    market_impact TEXT,
+                    opportunity_signal TEXT,
                     suggested_action TEXT,
+                    content_angle TEXT,
                     social_angle TEXT,
                     status TEXT DEFAULT 'raw',
                     created_at DATETIME,
@@ -54,9 +59,14 @@ class Database:
             self._ensure_column(cursor, "events", "location_confidence", "REAL")
             self._ensure_column(cursor, "events", "location_reason", "TEXT")
             self._ensure_column(cursor, "events", "cluster_id", "TEXT")
+            self._ensure_column(cursor, "events", "industry", "TEXT")
+            self._ensure_column(cursor, "events", "industry_tags", "TEXT")
             self._ensure_column(cursor, "events", "affected_groups", "TEXT")
             self._ensure_column(cursor, "events", "business_impact", "TEXT")
+            self._ensure_column(cursor, "events", "market_impact", "TEXT")
+            self._ensure_column(cursor, "events", "opportunity_signal", "TEXT")
             self._ensure_column(cursor, "events", "suggested_action", "TEXT")
+            self._ensure_column(cursor, "events", "content_angle", "TEXT")
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS event_clusters (
                     id TEXT PRIMARY KEY,
@@ -95,6 +105,21 @@ class Database:
                     created_at DATETIME
                 )
             ''')
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS source_health (
+                    id TEXT PRIMARY KEY,
+                    source_name TEXT,
+                    source_type TEXT,
+                    endpoint TEXT,
+                    status TEXT,
+                    latency_ms INTEGER,
+                    http_code INTEGER,
+                    fetched_count INTEGER,
+                    accepted_count INTEGER,
+                    error_message TEXT,
+                    updated_at DATETIME
+                )
+            ''')
             conn.commit()
 
     def _ensure_column(self, cursor, table_name, column_name, column_type):
@@ -113,9 +138,14 @@ class Database:
             if cursor.fetchone():
                 return False
             
+            industry_tags = event_data.get('industry_tags')
+            if isinstance(industry_tags, list):
+                import json
+                industry_tags = json.dumps(industry_tags, ensure_ascii=False)
+
             fields = [
                 'id', 'title', 'url', 'source', 'source_type', 'source_weight', 'published_at',
-                'raw_summary', 'category', 'status', 'created_at', 'updated_at'
+                'raw_summary', 'raw_content', 'category', 'industry_tags', 'status', 'created_at', 'updated_at'
             ]
             placeholders = ', '.join(['?'] * len(fields))
             values = [
@@ -127,7 +157,9 @@ class Database:
                 event_data.get('source_weight', 0.7),
                 event_data.get('published_at'),
                 event_data.get('raw_summary'),
+                event_data.get('raw_content'),
                 event_data.get('category'),
+                industry_tags,
                 'raw',
                 now,
                 now
@@ -171,7 +203,8 @@ class Database:
             'ai_summary', 'category', 'country', 'city', 'location_scope',
             'location_confidence', 'location_reason', 'lat', 'lon', 'severity',
             'confidence', 'risk_level', 'social_angle', 'cluster_id',
-            'affected_groups', 'business_impact', 'suggested_action'
+            'industry', 'industry_tags', 'affected_groups', 'business_impact',
+            'market_impact', 'opportunity_signal', 'suggested_action', 'content_angle'
         }
         updates = {k: v for k, v in field_data.items() if k in allowed_fields}
         if not updates and status is None:
@@ -238,4 +271,36 @@ class Database:
                 geocode_data.get('lon'),
                 now
             ))
+            conn.commit()
+
+    def record_source_health(self, item):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            now = datetime.now().isoformat()
+            source_name = item.get("source_name") or ""
+            source_type = item.get("source_type") or "unknown"
+            endpoint = item.get("endpoint") or ""
+            key = f"{source_type}:{source_name}:{endpoint}"
+            import hashlib
+            row_id = hashlib.md5(key.encode()).hexdigest()
+            cursor.execute(
+                '''
+                INSERT OR REPLACE INTO source_health
+                (id, source_name, source_type, endpoint, status, latency_ms, http_code, fetched_count, accepted_count, error_message, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''',
+                (
+                    row_id,
+                    source_name,
+                    source_type,
+                    endpoint,
+                    item.get("status", "unknown"),
+                    item.get("latency_ms"),
+                    item.get("http_code"),
+                    item.get("fetched_count", 0),
+                    item.get("accepted_count", 0),
+                    item.get("error_message"),
+                    now,
+                ),
+            )
             conn.commit()

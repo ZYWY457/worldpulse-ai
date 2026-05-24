@@ -73,6 +73,35 @@ class RiskScorer:
         validation_boost = min(18, rss_count * 4 + math.log1p(gdelt_count) * 3)
         return min(100, self.calculate_event_score(severity, category) * 0.65 + source_boost + validation_boost)
 
+    def explain_cluster_score(self, cluster):
+        severity = int(cluster.get('severity') or 1)
+        category = cluster.get('category') or 'other'
+        source_count = int(cluster.get('source_count') or 1)
+        source_weight_sum = float(cluster.get('source_weight_sum') or 0.5)
+        rss_count = int(cluster.get('rss_count') or 0)
+        gdelt_count = int(cluster.get('gdelt_count') or 0)
+
+        event_component = self.calculate_event_score(severity, category) * 0.65
+        source_boost = min(25, source_count * 4 + source_weight_sum * 3)
+        validation_boost = min(18, rss_count * 4 + math.log1p(gdelt_count) * 3)
+        total = min(100, event_component + source_boost + validation_boost)
+        return {
+            "total_score": round(total, 2),
+            "components": {
+                "event_component": round(event_component, 2),
+                "source_boost": round(source_boost, 2),
+                "validation_boost": round(validation_boost, 2),
+            },
+            "inputs": {
+                "severity": severity,
+                "category": category,
+                "source_count": source_count,
+                "source_weight_sum": source_weight_sum,
+                "rss_count": rss_count,
+                "gdelt_count": gdelt_count,
+            },
+        }
+
     def get_country_cii(self, country_name, recent_events):
         """
         Calculate Country Instability Index (CII) (0-100).

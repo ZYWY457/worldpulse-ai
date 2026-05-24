@@ -26,6 +26,24 @@ def database_has_demo_events(db: Database) -> bool:
         return int(cursor.fetchone()[0]) > 0
 
 
+def has_corrupted_demo_text(event: dict) -> bool:
+    text_fields = [
+        "title",
+        "raw_summary",
+        "ai_summary",
+        "business_impact",
+        "market_impact",
+        "opportunity_signal",
+        "suggested_action",
+        "content_angle",
+        "social_angle",
+    ]
+    values = [str(event.get(field) or "") for field in text_fields]
+    if isinstance(event.get("affected_groups"), list):
+        values.extend(str(item) for item in event["affected_groups"])
+    return any("????" in value for value in values)
+
+
 def load_demo_events(db: Database, force: bool = False) -> int:
     if not force and database_has_events(db):
         return 0
@@ -37,7 +55,11 @@ def load_demo_events(db: Database, force: bool = False) -> int:
     inserted = 0
     with db.get_connection() as conn:
         cursor = conn.cursor()
+        if force:
+            cursor.execute("DELETE FROM events WHERE source_type = 'demo' OR url LIKE 'https://example.com/demo/%'")
         for index, event in enumerate(events):
+            if has_corrupted_demo_text(event):
+                continue
             item = dict(event)
             item["published_at"] = (now - timedelta(hours=index)).isoformat()
             item.setdefault("source_type", "demo")
@@ -49,8 +71,14 @@ def load_demo_events(db: Database, force: bool = False) -> int:
             item.setdefault("location_scope", "specific")
             item.setdefault("location_confidence", 0.9)
             item.setdefault("location_reason", "Demo event coordinates")
+            item.setdefault("industry", None)
+            item.setdefault("market_impact", "")
+            item.setdefault("opportunity_signal", "")
+            item.setdefault("content_angle", item.get("social_angle") or "")
             if isinstance(item.get("affected_groups"), list):
                 item["affected_groups"] = json.dumps(item["affected_groups"], ensure_ascii=False)
+            if isinstance(item.get("industry_tags"), list):
+                item["industry_tags"] = json.dumps(item["industry_tags"], ensure_ascii=False)
 
             cursor.execute(
                 """
@@ -58,15 +86,17 @@ def load_demo_events(db: Database, force: bool = False) -> int:
                     id, title, url, source, source_type, source_weight, published_at,
                     raw_summary, raw_content, ai_summary, category, country, city,
                     location_scope, location_confidence, location_reason, lat, lon,
-                    severity, confidence, risk_level, affected_groups, business_impact,
-                    suggested_action, social_angle, status, created_at, updated_at
+                    severity, confidence, risk_level, industry, industry_tags, affected_groups,
+                    business_impact, market_impact, opportunity_signal, suggested_action,
+                    content_angle, social_angle, status, created_at, updated_at
                 )
                 VALUES (
                     :id, :title, :url, :source, :source_type, :source_weight, :published_at,
                     :raw_summary, :raw_content, :ai_summary, :category, :country, :city,
                     :location_scope, :location_confidence, :location_reason, :lat, :lon,
-                    :severity, :confidence, :risk_level, :affected_groups, :business_impact,
-                    :suggested_action, :social_angle, :status, :created_at, :updated_at
+                    :severity, :confidence, :risk_level, :industry, :industry_tags, :affected_groups,
+                    :business_impact, :market_impact, :opportunity_signal, :suggested_action,
+                    :content_angle, :social_angle, :status, :created_at, :updated_at
                 )
                 """,
                 item,

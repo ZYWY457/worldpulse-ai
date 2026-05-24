@@ -3,6 +3,8 @@ import yaml
 import hashlib
 import logging
 import requests
+import json
+import time
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from db.database import Database
@@ -69,6 +71,7 @@ class RSSCollector:
         timeout = source.get('timeout_seconds', self.timeout)
         max_items = int(source.get('max_items', 30))
         logger.info(f"Collecting from {name}: {url}")
+        started = time.perf_counter()
 
         try:
             response = requests.get(url, headers=self.headers, timeout=timeout)
@@ -76,15 +79,59 @@ class RSSCollector:
             feed = feedparser.parse(response.content)
             if getattr(feed, 'bozo', False):
                 logger.warning(f"Feed parse warning for {name}: {getattr(feed, 'bozo_exception', 'unknown')}")
-            return source, list(feed.entries[:max_items])
+            entries = list(feed.entries[:max_items])
+            self.db.record_source_health({
+                "source_name": name,
+                "source_type": "rss",
+                "endpoint": url,
+                "status": "ok",
+                "latency_ms": int((time.perf_counter() - started) * 1000),
+                "http_code": response.status_code,
+                "fetched_count": len(entries),
+                "accepted_count": len(entries),
+            })
+            return source, entries
         except requests.exceptions.Timeout:
             logger.warning(f"RSS source timed out and was skipped: {name}")
+            self.db.record_source_health({
+                "source_name": name,
+                "source_type": "rss",
+                "endpoint": url,
+                "status": "timeout",
+                "latency_ms": int((time.perf_counter() - started) * 1000),
+                "error_message": "timeout",
+            })
         except requests.exceptions.HTTPError as e:
             logger.warning(f"RSS source returned HTTP error and was skipped: {name} ({e.response.status_code})")
+            self.db.record_source_health({
+                "source_name": name,
+                "source_type": "rss",
+                "endpoint": url,
+                "status": "http_error",
+                "latency_ms": int((time.perf_counter() - started) * 1000),
+                "http_code": e.response.status_code,
+                "error_message": str(e),
+            })
         except requests.exceptions.RequestException as e:
             logger.warning(f"RSS source request failed and was skipped: {name}: {e}")
+            self.db.record_source_health({
+                "source_name": name,
+                "source_type": "rss",
+                "endpoint": url,
+                "status": "request_error",
+                "latency_ms": int((time.perf_counter() - started) * 1000),
+                "error_message": str(e),
+            })
         except Exception as e:
-            logger.error(f"Error collecting from {name}: {e}")
+            logger.exception("rss_collect_error", extra={"source": name, "endpoint": url})
+            self.db.record_source_health({
+                "source_name": name,
+                "source_type": "rss",
+                "endpoint": url,
+                "status": "exception",
+                "latency_ms": int((time.perf_counter() - started) * 1000),
+                "error_message": str(e),
+            })
 
         return source, []
 
@@ -108,6 +155,11 @@ class RSSCollector:
         if not published_at:
             published_at = datetime.now().isoformat()
 
+        industry_tags = source.get('industry_tags') or []
+        source_pack = source.get('source_pack')
+        if source_pack and source_pack not in industry_tags:
+            industry_tags = [*industry_tags, source_pack]
+
         return {
             'id': event_id,
             'title': entry.get('title', 'No Title'),
@@ -117,7 +169,9 @@ class RSSCollector:
             'source_weight': source.get('source_weight', 0.75),
             'published_at': published_at,
             'raw_summary': entry.get('summary', '') or entry.get('description', ''),
+            'raw_content': entry.get('content', [{}])[0].get('value') if entry.get('content') else None,
             'category': source.get('category'),
+            'industry_tags': json.dumps(industry_tags, ensure_ascii=False) if industry_tags else None,
         }
 
 if __name__ == "__main__":
