@@ -30,11 +30,13 @@ class AIClient:
             self.model = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
             self.api_key = os.getenv("DEEPSEEK_API_KEY")
 
-        # Use the pre-configured OpenAI client from the environment if possible
-        if not self.use_ollama and os.getenv("OPENAI_API_KEY"):
-            self.client = OpenAI() # Uses pre-configured env vars
+        self.client = None
+        if self.use_ollama:
+            self.client = OpenAI(api_key="ollama", base_url=self.base_url)
+        elif os.getenv("OPENAI_API_KEY"):
+            self.client = OpenAI()
             self.model = "gpt-4.1-mini"
-        else:
+        elif self.api_key:
             self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
 
     def update_runtime_config(self, payload: dict):
@@ -60,7 +62,7 @@ class AIClient:
         if choice == "openai":
             key = self.runtime_config.get("openai_api_key") or os.getenv("OPENAI_API_KEY")
             if not key:
-                return self.client, self.model
+                return None, "gpt-4.1-mini"
             return OpenAI(api_key=key), "gpt-4.1-mini"
         if choice == "ollama":
             base_url = self.runtime_config.get("ollama_base_url") or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
@@ -70,6 +72,8 @@ class AIClient:
             base_url = self.runtime_config.get("deepseek_base_url") or os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
             model = self.runtime_config.get("deepseek_model") or os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
             api_key = self.runtime_config.get("deepseek_api_key") or os.getenv("DEEPSEEK_API_KEY")
+            if not api_key:
+                return None, model
             return OpenAI(api_key=api_key, base_url=base_url), model
         return self.client, self.model
 
@@ -81,7 +85,9 @@ class AIClient:
             return "openai"
         if (self.runtime_config.get("deepseek_api_key") or os.getenv("DEEPSEEK_API_KEY")):
             return "deepseek"
-        return "ollama"
+        if self.use_ollama:
+            return "ollama"
+        return "deepseek"
 
     def _provider_config(self, provider: str) -> dict:
         if provider == "openai":
@@ -124,6 +130,16 @@ class AIClient:
         started = time.perf_counter()
         try:
             runtime_client, runtime_model = self._build_runtime(provider)
+            if runtime_client is None:
+                return {
+                    "ok": True,
+                    "requested": (llm or "auto"),
+                    "provider": provider,
+                    "configured": False,
+                    "available": False,
+                    "latency_ms": None,
+                    "message": f"{provider} API Key 未配置",
+                }
             runtime_client.chat.completions.create(
                 model=runtime_model,
                 messages=[
@@ -169,6 +185,9 @@ class AIClient:
         try:
             provider = self._resolve_choice(llm)
             runtime_client, runtime_model = self._build_runtime(provider)
+            if runtime_client is None:
+                logger.warning("ai_provider_not_configured", extra={"provider": provider})
+                return None
             response = runtime_client.chat.completions.create(
                 model=runtime_model,
                 messages=[

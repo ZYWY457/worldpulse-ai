@@ -1,4 +1,5 @@
 import json
+import os
 import re
 from datetime import datetime, timedelta
 from typing import Any
@@ -24,6 +25,13 @@ from services.event_aggregator import EventAggregator
 from services.rule_geotagger import RuleBasedGeotagger
 from services.risk_score import RiskScorer
 from services.task_control import TaskControl
+
+
+def get_cors_origins() -> list[str]:
+    raw = os.getenv("CORS_ALLOW_ORIGINS", "")
+    if raw.strip():
+        return [origin.strip() for origin in raw.split(",") if origin.strip()]
+    return ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 
 class ActionResponse(BaseModel):
@@ -102,7 +110,7 @@ app = FastAPI(title="WorldPulse Radar API", version="0.3.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=get_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
