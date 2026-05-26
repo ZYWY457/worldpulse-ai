@@ -22,6 +22,8 @@ from backend.industries import get_industry, get_industry_ids
 from db.database import Database
 from services.correlation import EventCorrelator
 from services.event_aggregator import EventAggregator
+from services.news_scheduler import NewsScheduler
+from services.pipelines import IngestionPipeline, ProcessingPipeline
 from services.rule_geotagger import RuleBasedGeotagger
 from services.risk_score import RiskScorer
 from services.task_control import TaskControl
@@ -38,6 +40,19 @@ class ActionResponse(BaseModel):
     ok: bool
     message: str
     count: int | None = None
+
+
+class JobStatusResponse(BaseModel):
+    enabled: bool
+    running: bool
+    interval_minutes: int
+    last_started_at: str | None = None
+    last_finished_at: str | None = None
+    next_run_at: str | None = None
+    last_count: int | None = None
+    last_message: str | None = None
+    last_error: str | None = None
+    run_count: int
 
 
 class MetricsResponse(BaseModel):
@@ -94,17 +109,61 @@ class LlmConfigRequest(BaseModel):
 
 
 db = Database("storage/worldpulse.db")
-task_control = TaskControl()
-collector = RSSCollector(db, task_control=task_control)
-gdelt_collector = GDELTCollector(db, task_control=task_control)
-static_page_collector = StaticPageCollector(db, task_control=task_control)
+ingest_task_control = TaskControl()
+process_task_control = TaskControl()
+collector = RSSCollector(db, task_control=ingest_task_control)
+gdelt_collector = GDELTCollector(db, task_control=ingest_task_control)
+static_page_collector = StaticPageCollector(db, task_control=ingest_task_control)
 analyzer = EventAnalyzer(db)
 profile_ai = AIClient()
 social_writer = SocialMediaWriter()
 risk_scorer = RiskScorer(db)
 correlator = EventCorrelator(db)
 aggregator = EventAggregator(db)
-rule_geotagger = RuleBasedGeotagger(db, task_control=task_control)
+rule_geotagger = RuleBasedGeotagger(db, task_control=process_task_control)
+
+
+def env_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def env_int(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+
+ingestion_pipeline = IngestionPipeline(collector, gdelt_collector, static_page_collector, ingest_task_control)
+processing_pipeline = ProcessingPipeline(
+    rule_geotagger,
+    aggregator,
+    process_task_control,
+    geotag_limit=env_int("AUTO_GEOTAG_LIMIT", 200),
+    repair_limit=env_int("AUTO_REPAIR_LIMIT", 500),
+)
+
+
+news_scheduler = NewsScheduler(
+    ingestion_pipeline.run,
+    enabled=env_bool("AUTO_COLLECT_ENABLED", True),
+    interval_minutes=env_int("AUTO_COLLECT_INTERVAL_MINUTES", 60),
+    startup_delay_seconds=env_int("AUTO_COLLECT_STARTUP_DELAY_SECONDS", 20),
+    job_label="采集新闻",
+)
+processing_scheduler = NewsScheduler(
+    processing_pipeline.run,
+    enabled=env_bool("AUTO_PROCESS_ENABLED", True),
+    interval_minutes=env_int("AUTO_PROCESS_INTERVAL_MINUTES", 15),
+    startup_delay_seconds=env_int("AUTO_PROCESS_STARTUP_DELAY_SECONDS", 90),
+    job_label="处理定位",
+)
 
 app = FastAPI(title="WorldPulse Radar API", version="0.3.0")
 
@@ -119,6 +178,18 @@ app.add_middleware(
 demo_count = load_demo_if_empty(db)
 if demo_count:
     aggregator.rebuild_recent_clusters(hours=168)
+
+
+@app.on_event("startup")
+def start_news_scheduler() -> None:
+    news_scheduler.start()
+    processing_scheduler.start()
+
+
+@app.on_event("shutdown")
+def stop_news_scheduler() -> None:
+    news_scheduler.stop()
+    processing_scheduler.stop()
 
 
 def load_events_df() -> pd.DataFrame:
@@ -712,49 +783,36 @@ def get_industries() -> dict[str, Any]:
 
 @app.post("/collect", response_model=ActionResponse)
 def collect_news() -> ActionResponse:
-    task_control.reset()
-    rss_count = collector.collect()
-    if task_control.is_cancelled():
-        return ActionResponse(ok=False, message=f"Collection cancelled. RSS: {rss_count}.", count=rss_count)
-    gdelt_count = gdelt_collector.collect()
-    if task_control.is_cancelled():
-        return ActionResponse(ok=False, message=f"Collection cancelled. RSS: {rss_count}, GDELT: {gdelt_count}.", count=rss_count + gdelt_count)
-    crawler_count = static_page_collector.collect()
-    if task_control.is_cancelled():
-        return ActionResponse(ok=False, message=f"Collection cancelled. RSS: {rss_count}, GDELT: {gdelt_count}, Crawler: {crawler_count}.", count=rss_count + gdelt_count + crawler_count)
-    cluster_count = aggregator.rebuild_recent_clusters()
-    total_count = rss_count + gdelt_count + crawler_count
-    return ActionResponse(
-        ok=True,
-        message=f"采集完成。RSS: {rss_count}, GDELT: {gdelt_count}, 轻爬虫: {crawler_count}, 事件簇: {cluster_count}.",
-        count=total_count,
-    )
+    result = news_scheduler.trigger(source="manual")
+    return ActionResponse(ok=bool(result.get("ok")), message=str(result.get("message")), count=int(result.get("count") or 0))
+
+
+@app.get("/collect/status", response_model=JobStatusResponse)
+def get_collection_status() -> dict[str, Any]:
+    return news_scheduler.status()
 
 
 @app.post("/analyze", response_model=ActionResponse)
 def analyze_news(limit: int = Query(default=20, ge=1, le=200)) -> ActionResponse:
-    task_control.reset()
-    analyzed_count = rule_geotagger.geotag_unmapped(limit=limit)
-    if task_control.is_cancelled():
-        return ActionResponse(ok=False, message=f"Map tagging cancelled. Mapped: {analyzed_count}.", count=analyzed_count)
-    cluster_count = aggregator.rebuild_recent_clusters()
-    return ActionResponse(ok=True, message=f"Map tagging completed. Clusters: {cluster_count}.", count=analyzed_count)
+    result = processing_scheduler.trigger(source="manual")
+    return ActionResponse(ok=bool(result.get("ok")), message=str(result.get("message")), count=int(result.get("count") or 0))
 
 
 @app.post("/geotag", response_model=ActionResponse)
 def geotag_news(limit: int = Query(default=20, ge=1, le=200)) -> ActionResponse:
-    task_control.reset()
-    mapped_count = rule_geotagger.geotag_unmapped(limit=limit)
-    repaired_count = rule_geotagger.repair_existing_locations(limit=500)
-    if task_control.is_cancelled():
-        return ActionResponse(ok=False, message=f"Rule map tagging cancelled. Mapped: {mapped_count}, repaired: {repaired_count}.", count=mapped_count)
-    cluster_count = aggregator.rebuild_recent_clusters()
-    return ActionResponse(ok=True, message=f"定位完成。新增标记: {mapped_count}, 修复: {repaired_count}, 事件簇: {cluster_count}.", count=mapped_count + repaired_count)
+    result = processing_scheduler.trigger(source="manual")
+    return ActionResponse(ok=bool(result.get("ok")), message=str(result.get("message")), count=int(result.get("count") or 0))
+
+
+@app.get("/process/status", response_model=JobStatusResponse)
+def get_processing_status() -> dict[str, Any]:
+    return processing_scheduler.status()
 
 
 @app.post("/cancel", response_model=ActionResponse)
 def cancel_running_task() -> ActionResponse:
-    task_control.cancel()
+    ingest_task_control.cancel()
+    process_task_control.cancel()
     return ActionResponse(ok=True, message="已请求终止")
 
 

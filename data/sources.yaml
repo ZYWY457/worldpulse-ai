@@ -136,16 +136,308 @@ sources:
     source_weight: 0.9
     url: https://rss.nytimes.com/services/xml/rss/nyt/World.xml
     max_items: 25
+    crawl_interval_minutes: 120
+
+  # --- Free Global Media RSS / Atom ---
+  - name: NPR World
+    type: rss
+    source_pack: baseline_global
+    industry_tags: [geopolitics, content]
+    category: world
+    source_weight: 0.82
+    url: https://feeds.npr.org/1004/rss.xml
+    max_items: 25
+    crawl_interval_minutes: 120
+  - name: NPR Business
+    type: rss
+    source_pack: finance_macro
+    industry_tags: [finance, trade]
+    category: finance
+    source_weight: 0.82
+    url: https://feeds.npr.org/1006/rss.xml
+    max_items: 20
+    crawl_interval_minutes: 120
+  - name: DW World
+    type: rss
+    source_pack: baseline_global
+    industry_tags: [geopolitics, content]
+    category: world
+    source_weight: 0.82
+    url: https://rss.dw.com/xml/rss-en-world
+    max_items: 25
+    crawl_interval_minutes: 120
+  - name: France 24
+    type: rss
+    source_pack: baseline_global
+    industry_tags: [geopolitics, content]
+    category: world
+    source_weight: 0.82
+    url: https://www.france24.com/en/rss
+    max_items: 25
+    crawl_interval_minutes: 120
+  - name: The Verge
+    type: rss
+    source_pack: tech_ai
+    industry_tags: [tech, ai, content]
+    category: technology
+    source_weight: 0.78
+    url: https://www.theverge.com/rss/index.xml
+    max_items: 25
+    crawl_interval_minutes: 120
+  - name: Ars Technica
+    type: rss
+    source_pack: tech_ai
+    industry_tags: [tech, ai, cybersecurity]
+    category: technology
+    source_weight: 0.78
+    url: https://feeds.arstechnica.com/arstechnica/index
+    max_items: 25
+    crawl_interval_minutes: 120
+  - name: MIT News AI
+    type: rss
+    source_pack: tech_ai
+    industry_tags: [tech, ai]
+    category: ai_model
+    source_weight: 0.84
+    url: https://news.mit.edu/rss/topic/artificial-intelligence2
+    max_items: 20
+    crawl_interval_minutes: 240
+  - name: Hacker News Front Page
+    type: rss
+    source_pack: tech_ai
+    industry_tags: [tech, ai, content]
+    category: technology
+    source_weight: 0.62
+    url: https://news.ycombinator.com/rss
+    max_items: 30
+    crawl_interval_minutes: 120
+
+  # --- Free Official RSS / Public Sector Sources ---
+  - name: Federal Reserve Press Releases
+    type: rss
+    source_pack: finance_macro
+    industry_tags: [finance, geopolitics]
+    category: central_bank
+    source_weight: 0.96
+    url: https://www.federalreserve.gov/feeds/press_all.xml
+    max_items: 20
+    crawl_interval_minutes: 180
+  - name: Federal Reserve Monetary Policy
+    type: rss
+    source_pack: finance_macro
+    industry_tags: [finance]
+    category: central_bank
+    source_weight: 0.97
+    url: https://www.federalreserve.gov/feeds/press_monetary.xml
+    max_items: 20
+    crawl_interval_minutes: 180
+  - name: Federal Reserve Speeches Testimony
+    type: rss
+    source_pack: finance_macro
+    industry_tags: [finance]
+    category: central_bank
+    source_weight: 0.92
+    url: https://www.federalreserve.gov/feeds/speeches_and_testimony.xml
+    max_items: 20
+    crawl_interval_minutes: 240
+  - name: US Commerce Newsroom
+    type: rss
+    source_pack: trade_supply_chain
+    industry_tags: [trade, supply_chain, tech]
+    category: trade_policy
+    source_weight: 0.94
+    url: https://www.commerce.gov/feeds/news
+    max_items: 20
+    crawl_interval_minutes: 240
+    enabled: false
+    reason: "Returns 403 from current diagnostics; keep disabled until a stable public feed URL is confirmed."
+  - name: FTC Press Releases
+    type: rss
+    source_pack: trade_supply_chain
+    industry_tags: [trade, tech, compliance]
+    category: compliance
+    source_weight: 0.92
+    url: https://www.ftc.gov/feeds/press-release.xml
+    max_items: 20
+    crawl_interval_minutes: 240
+  - name: FTC Competition Press Releases
+    type: rss
+    source_pack: trade_supply_chain
+    industry_tags: [trade, finance, tech]
+    category: compliance
+    source_weight: 0.92
+    url: https://www.ftc.gov/feeds/press-release-competition.xml
+    max_items: 20
+    crawl_interval_minutes: 240
+  - name: SEC Press Releases
+    type: rss
+    source_pack: finance_macro
+    industry_tags: [finance, compliance]
+    category: finance
+    source_weight: 0.94
+    url: https://www.sec.gov/news/pressreleases.rss
+    max_items: 20
+    crawl_interval_minutes: 240
+  - name: CFTC Press Releases
+    type: rss
+    source_pack: finance_macro
+    industry_tags: [finance, commodity]
+    category: finance
+    source_weight: 0.93
+    url: https://www.cftc.gov/RSS/RSSGP/rssgp.xml
+    max_items: 20
+    crawl_interval_minutes: 240
+  - name: CFTC Enforcement Releases
+    type: rss
+    source_pack: finance_macro
+    industry_tags: [finance, compliance]
+    category: compliance
+    source_weight: 0.93
+    url: https://www.cftc.gov/RSS/RSSEP/rssep.xml
+    max_items: 20
+    crawl_interval_minutes: 240
+    enabled: false
+    reason: "Returns 404 from current diagnostics; keep disabled until a stable public feed URL is confirmed."
+  - name: NIST News
+    type: rss
+    source_pack: tech_ai
+    industry_tags: [tech, manufacturing, standards]
+    category: technology
+    source_weight: 0.9
+    url: https://www.nist.gov/news-events/news/rss.xml
+    max_items: 20
+    crawl_interval_minutes: 240
+  - name: NIST Cybersecurity
+    type: rss
+    source_pack: tech_ai
+    industry_tags: [tech, cybersecurity, compliance]
+    category: cybersecurity
+    source_weight: 0.92
+    url: https://www.nist.gov/news-events/cybersecurity/rss.xml
+    max_items: 20
+    crawl_interval_minutes: 240
+  - name: NIST Manufacturing
+    type: rss
+    source_pack: supply_chain
+    industry_tags: [supply_chain, manufacturing, tech]
+    category: supply_chain
+    source_weight: 0.9
+    url: https://www.nist.gov/news-events/manufacturing/rss.xml
+    max_items: 20
+    crawl_interval_minutes: 240
+  - name: DOJ Antitrust Press Releases
+    type: rss
+    source_pack: trade_supply_chain
+    industry_tags: [trade, tech, compliance]
+    category: compliance
+    source_weight: 0.92
+    url: https://www.justice.gov/atr/rss.xml
+    max_items: 20
+    crawl_interval_minutes: 240
+    enabled: false
+    reason: "Returns 404 from current diagnostics; keep disabled until a stable public feed URL is confirmed."
+
+  # --- Low-cost Free Discovery Feeds ---
+  - name: Google News Tariffs
+    type: rss
+    source_pack: trade_supply_chain
+    industry_tags: [trade, supply_chain]
+    category: tariff_policy
+    source_weight: 0.58
+    url: https://news.google.com/rss/search?q=tariff%20OR%20customs%20OR%20duties%20when%3A1d&hl=en-US&gl=US&ceid=US:en
+    max_items: 30
+    crawl_interval_minutes: 120
+  - name: Google News Supply Chain
+    type: rss
+    source_pack: trade_supply_chain
+    industry_tags: [trade, supply_chain]
+    category: supply_chain
+    source_weight: 0.58
+    url: https://news.google.com/rss/search?q=%22supply%20chain%22%20OR%20shipping%20OR%20port%20OR%20logistics%20when%3A1d&hl=en-US&gl=US&ceid=US:en
+    max_items: 30
+    crawl_interval_minutes: 120
+  - name: Google News Sanctions
+    type: rss
+    source_pack: geopolitics
+    industry_tags: [geopolitics, trade, finance]
+    category: sanctions_conflict
+    source_weight: 0.58
+    url: https://news.google.com/rss/search?q=sanctions%20OR%20export%20control%20when%3A1d&hl=en-US&gl=US&ceid=US:en
+    max_items: 30
+    crawl_interval_minutes: 120
+  - name: Google News AI Regulation
+    type: rss
+    source_pack: tech_ai
+    industry_tags: [tech, ai, compliance]
+    category: tech_regulation
+    source_weight: 0.58
+    url: https://news.google.com/rss/search?q=%22AI%20regulation%22%20OR%20%22artificial%20intelligence%22%20policy%20when%3A1d&hl=en-US&gl=US&ceid=US:en
+    max_items: 30
+    crawl_interval_minutes: 120
+  - name: Google News Cybersecurity
+    type: rss
+    source_pack: tech_ai
+    industry_tags: [tech, cybersecurity]
+    category: cybersecurity
+    source_weight: 0.58
+    url: https://news.google.com/rss/search?q=cyberattack%20OR%20ransomware%20OR%20%22data%20breach%22%20when%3A1d&hl=en-US&gl=US&ceid=US:en
+    max_items: 30
+    crawl_interval_minutes: 120
 
 gdelt:
   enabled: true
   source_weight: 0.55
   timespan: 24h
-  max_records: 50
+  max_records: 20
+  max_queries_per_run: 4
+  per_query_delay_seconds: 8
   sort: datedesc
   queries:
-    - category: world
-      query: '(war OR conflict OR missile OR drone OR attack OR military OR ceasefire OR election OR protest OR sanctions OR coup OR "state of emergency" OR diplomacy OR inflation OR recession OR "central bank" OR oil OR trade OR earthquake OR flood OR wildfire OR hurricane OR outbreak OR epidemic OR cybersecurity OR semiconductor OR "data breach")'
+    - category: sanctions_conflict
+      query: '(sanctions OR "export control" OR "asset freeze" OR OFAC OR embargo OR "trade restriction")'
+      max_records: 40
+    - category: port_disruption
+      query: '("port strike" OR "shipping delay" OR "shipping disruption" OR "red sea" OR suez OR "container backlog" OR "air cargo delay")'
+      max_records: 40
+    - category: tariff_policy
+      query: '(tariff OR customs OR "anti-dumping" OR "import duty" OR "trade war" OR "de minimis")'
+      max_records: 40
+    - category: central_bank
+      query: '("central bank" OR "interest rate" OR inflation OR CPI OR "rate cut" OR "rate hike" OR "monetary policy")'
+      max_records: 40
+    - category: currency_oil
+      query: '("oil price" OR crude OR brent OR WTI OR "natural gas" OR currency OR exchange-rate OR dollar)'
+      max_records: 35
+    - category: chips
+      query: '(semiconductor OR chipmaker OR "AI chip" OR GPU OR Nvidia OR TSMC OR "export controls")'
+      max_records: 35
+    - category: ai_model
+      query: '("artificial intelligence" OR "AI model" OR "large language model" OR OpenAI OR DeepSeek OR Anthropic)'
+      max_records: 35
+    - category: cloud_datacenter
+      query: '("data center" OR datacenter OR "cloud outage" OR "power demand" OR "AI infrastructure")'
+      max_records: 30
+    - category: cybersecurity
+      query: '(cyberattack OR ransomware OR "data breach" OR malware OR "critical vulnerability" OR hack)'
+      max_records: 40
+    - category: military_conflict
+      query: '(war OR missile OR drone OR attack OR military OR ceasefire OR "border clash" OR "armed conflict")'
+      max_records: 40
+    - category: protest_unrest
+      query: '(protest OR strike OR riot OR unrest OR coup OR "state of emergency" OR election)'
+      max_records: 35
+    - category: disaster
+      query: '(earthquake OR flood OR wildfire OR hurricane OR typhoon OR drought OR landslide)'
+      max_records: 35
+    - category: health
+      query: '(outbreak OR epidemic OR pandemic OR "public health emergency" OR WHO OR avian OR mpox)'
+      max_records: 30
+    - category: raw_materials
+      query: '(lithium OR copper OR nickel OR cobalt OR "rare earth" OR uranium OR "critical minerals")'
+      max_records: 35
+    - category: factory_disruption
+      query: '("factory fire" OR "factory shutdown" OR "plant closure" OR "labor strike" OR "production halt")'
+      max_records: 30
 
 crawler_static:
   # --- Trade / Customs / Sanctions ---

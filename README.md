@@ -21,6 +21,7 @@
 ## 核心功能
 
 - 全球事件地图
+- 新闻库缓存展示
 - 多行业模式切换
 - 今日行业简报
 - 单条事件行业影响分析
@@ -52,6 +53,36 @@ npm run dev
 ```
 
 ## 环境变量
+
+## 数据流架构
+
+WorldPulse 的数据流分为三层，避免采集和展示互相阻塞：
+
+1. 采集层：RSS/GDELT/轻爬虫只负责把新闻写入 `events` 缓存表。
+2. 处理层：后台处理任务负责定位、修复地点和生成事件簇。
+3. 展示层：新闻库直接读取 `/events`，地图只读取 `/map-events` 这个已定位子集。
+
+所以“抓到新闻但地图没出现”通常表示新闻已入库、等待定位，并不表示采集失败。
+
+后台公共采集：
+
+```env
+AUTO_COLLECT_ENABLED=true
+AUTO_COLLECT_INTERVAL_MINUTES=60
+AUTO_COLLECT_STARTUP_DELAY_SECONDS=20
+AUTO_GEOTAG_LIMIT=200
+AUTO_PROCESS_ENABLED=true
+AUTO_PROCESS_INTERVAL_MINUTES=15
+AUTO_PROCESS_STARTUP_DELAY_SECONDS=90
+```
+
+采集到的新闻会写入 `storage/worldpulse.db`，前端用户共享同一份缓存；用户刷新页面不会重复请求新闻源。`AUTO_COLLECT_INTERVAL_MINUTES` 最小按 5 分钟执行，建议生产环境设置为 30-120 分钟。
+
+免费新闻源：
+
+- `data/sources.yaml` 已按 `baseline_global`、`trade_supply_chain`、`finance_macro`、`tech_ai` 等 source pack 扩展。
+- 当前默认新增源不需要 API Key，主要使用 RSS/Atom、官方公开 RSS、Google News RSS 和 GDELT。
+- 每个源可配置 `crawl_interval_minutes`，避免每次后台任务都重复请求同一个新闻源。
 
 DeepSeek：
 

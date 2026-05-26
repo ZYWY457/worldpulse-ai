@@ -304,3 +304,13 @@ class Database:
                 ),
             )
             conn.commit()
+
+    def get_source_health(self, source_type, source_name, endpoint):
+        key = f"{source_type}:{source_name or ''}:{endpoint or ''}"
+        import hashlib
+        row_id = hashlib.md5(key.encode()).hexdigest()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM source_health WHERE id = ?", (row_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None

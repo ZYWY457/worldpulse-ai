@@ -1,7 +1,7 @@
 import hashlib
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import urljoin
 
 import requests
@@ -53,6 +53,9 @@ class StaticPageCollector:
     def _fetch_source(self, source):
         url = source.get("url")
         if not url:
+            return []
+        if self._should_skip_source(source, "crawler_static"):
+            logger.info(f"Skipping static source within crawl interval: {source.get('name')}")
             return []
         started = time.perf_counter()
         try:
@@ -115,6 +118,23 @@ class StaticPageCollector:
             if selected:
                 return selected
         return soup.select("article, li, .views-row, .news-item, .item, .card, tr")
+
+    def _should_skip_source(self, source, source_type):
+        interval = source.get("crawl_interval_minutes")
+        if not interval:
+            return False
+        try:
+            interval_minutes = int(interval)
+        except (TypeError, ValueError):
+            return False
+        health = self.db.get_source_health(source_type, source.get("name"), source.get("url"))
+        if not health or not health.get("updated_at"):
+            return False
+        try:
+            updated_at = datetime.fromisoformat(str(health["updated_at"]))
+        except ValueError:
+            return False
+        return datetime.now() - updated_at < timedelta(minutes=max(5, interval_minutes))
 
     def _parse_item(self, item, source, base_url):
         link_el = self._first_selected(item, source.get("link_selector") or "a[href]")

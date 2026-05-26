@@ -5,7 +5,7 @@ import logging
 import requests
 import json
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from db.database import Database
 
@@ -26,7 +26,7 @@ class RSSCollector:
 
     def load_sources(self):
         try:
-            with open(self.sources_path, 'r') as f:
+            with open(self.sources_path, 'r', encoding='utf-8') as f:
                 config = yaml.safe_load(f)
                 return config.get('sources', [])
         except Exception as e:
@@ -68,6 +68,9 @@ class RSSCollector:
 
         name = source.get('name')
         url = source.get('url')
+        if self._should_skip_source(source, "rss"):
+            logger.info(f"Skipping RSS source within crawl interval: {name}")
+            return source, []
         timeout = source.get('timeout_seconds', self.timeout)
         max_items = int(source.get('max_items', 30))
         logger.info(f"Collecting from {name}: {url}")
@@ -137,6 +140,23 @@ class RSSCollector:
 
     def _is_cancelled(self):
         return bool(self.task_control and self.task_control.is_cancelled())
+
+    def _should_skip_source(self, source, source_type):
+        interval = source.get("crawl_interval_minutes")
+        if not interval:
+            return False
+        try:
+            interval_minutes = int(interval)
+        except (TypeError, ValueError):
+            return False
+        health = self.db.get_source_health(source_type, source.get("name"), source.get("url"))
+        if not health or not health.get("updated_at"):
+            return False
+        try:
+            updated_at = datetime.fromisoformat(str(health["updated_at"]))
+        except ValueError:
+            return False
+        return datetime.now() - updated_at < timedelta(minutes=max(5, interval_minutes))
 
     def _entry_to_event(self, source, entry):
         name = source.get('name')

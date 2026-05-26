@@ -70,6 +70,11 @@ type MapEventsResponse = {
   total: number;
 };
 
+type EventsResponse = {
+  items: EventItem[];
+  total: number;
+};
+
 type SingleAnalyzeResponse = {
   ok: boolean;
   message: string;
@@ -126,6 +131,18 @@ type SourceHealthResponse = {
     latency_ms?: number | null;
     updated_at: string;
   }>;
+};
+type CollectionStatusResponse = {
+  enabled: boolean;
+  running: boolean;
+  interval_minutes: number;
+  last_started_at: string | null;
+  last_finished_at: string | null;
+  next_run_at: string | null;
+  last_count: number | null;
+  last_message: string | null;
+  last_error: string | null;
+  run_count: number;
 };
 type LlmConfigResponse = {
   ok: boolean;
@@ -397,37 +414,53 @@ function t(key: I18nKey): string {
 appEl.innerHTML = `
   <main class="dashboard">
     <header class="topbar">
-      <div>
+      <div class="hero-copy">
         <h1>WorldPulse Radar</h1>
-        <p data-i18n="subtitle">${t("subtitle")}</p>
-        <p class="product-copy">自动监控全球新闻、政策、市场、科技、供应链和地缘事件，并按不同业务视角生成中文影响分析。</p>
+        <p class="eyebrow" data-i18n="subtitle">${t("subtitle")}</p>
+        <p class="product-copy">把全球新闻、政策、市场、科技、供应链和地缘事件整理成可筛选、可定位、可追踪的业务风险雷达。</p>
       </div>
-      <div class="actions">
-        <select id="languageSelect" aria-label="Language">
-          <option value="zh">中文</option>
-          <option value="en">English</option>
-        </select>
-        <select id="timeRange">
-          <option value="1h">1小时</option>
-          <option value="24h" selected>24小时</option>
-          <option value="7d">7天</option>
-          <option value="30d">30天</option>
-        </select>
-        <select id="llmSelect" aria-label="LLM">
-          <option value="auto">Auto</option>
-          <option value="openai">OpenAI</option>
-          <option value="deepseek">DeepSeek</option>
-          <option value="ollama">Ollama</option>
-        </select>
-        <button id="llmConfigBtn" data-i18n="llmConfig">${t("llmConfig")}</button>
-        <button id="llmCheckBtn" data-i18n="llmCheck">${t("llmCheck")}</button>
-        <span id="llmStatus" class="llm-status idle">${t("llmChecking")}</span>
-        <button id="sourceHealthBtn" data-i18n="sourceHealth">${t("sourceHealth")}</button>
-        <button id="collectBtn" data-i18n="collect" title="拉取 RSS/GDELT/轻爬虫新事件">${t("collect")}</button>
-        <button id="analyzeBtn" data-i18n="analyze" title="对未定位事件执行地图定位与风险初标记">${t("analyze")}</button>
-        <button id="profileBtn" data-i18n="profile" title="填写职业与需求，生成个性化优先级">${t("profile")}</button>
-        <button id="cancelBtn" class="danger-btn" data-i18n="stop" disabled>${t("stop")}</button>
-        <button id="refreshBtn" data-i18n="refresh">${t("refresh")}</button>
+      <div class="actions command-center" aria-label="控制台">
+        <div class="action-cluster">
+          <label>
+            <span>语言</span>
+            <select id="languageSelect" aria-label="Language">
+              <option value="zh">中文</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+          <label>
+            <span>时间范围</span>
+            <select id="timeRange">
+              <option value="1h">1小时</option>
+              <option value="24h" selected>24小时</option>
+              <option value="7d">7天</option>
+              <option value="30d">30天</option>
+            </select>
+          </label>
+          <label>
+            <span>分析模型</span>
+            <select id="llmSelect" aria-label="LLM">
+              <option value="auto">自动选择</option>
+              <option value="openai">OpenAI</option>
+              <option value="deepseek">DeepSeek</option>
+              <option value="ollama">本地 Ollama</option>
+            </select>
+          </label>
+        </div>
+        <div class="action-cluster model-cluster">
+          <button id="llmConfigBtn" data-i18n="llmConfig">${t("llmConfig")}</button>
+          <button id="llmCheckBtn" data-i18n="llmCheck">${t("llmCheck")}</button>
+          <span id="llmStatus" class="llm-status idle">${t("llmChecking")}</span>
+        </div>
+        <div class="action-cluster ops-cluster">
+          <button id="sourceHealthBtn" data-i18n="sourceHealth">${t("sourceHealth")}</button>
+          <button id="collectBtn" data-i18n="collect" title="拉取 RSS/GDELT/轻爬虫新事件">${t("collect")}</button>
+          <button id="analyzeBtn" data-i18n="analyze" title="对未定位事件执行地图定位与风险初标记">${t("analyze")}</button>
+          <button id="profileBtn" data-i18n="profile" title="填写职业与需求，生成个性化优先级">${t("profile")}</button>
+          <button id="cancelBtn" class="danger-btn" data-i18n="stop" disabled>${t("stop")}</button>
+          <button id="refreshBtn" data-i18n="refresh">${t("refresh")}</button>
+          <span id="collectionStatus" class="collection-status">自动采集准备中</span>
+        </div>
       </div>
     </header>
     <section class="industry-tabs" aria-label="行业模式">
@@ -444,17 +477,30 @@ appEl.innerHTML = `
     <section class="llm-config-panel" id="llmConfigPanel" hidden>
       <div class="profile-head">
         <h2>${t("llmConfig")}</h2>
+        <span class="panel-kicker">选择一个可用模型后，AI 会用于画像、摘要和行业影响分析。</span>
       </div>
       <div class="llm-grid">
-        <input id="openaiKeyInput" type="password" placeholder="OpenAI API Key (sk-...)" />
-        <input id="deepseekKeyInput" type="password" placeholder="DeepSeek API Key (sk-...)" />
-        <input id="deepseekBaseInput" type="text" placeholder="DeepSeek Base URL" value="https://api.deepseek.com" />
-        <input id="deepseekModelInput" type="text" placeholder="DeepSeek Model" value="deepseek-chat" />
-        <input id="ollamaBaseInput" type="text" placeholder="Ollama Base URL" value="http://localhost:11434/v1" />
-        <input id="ollamaModelInput" type="text" placeholder="Ollama Model" value="qwen2.5:7b" />
+        <div class="llm-card">
+          <strong>OpenAI</strong>
+          <small>云端通用模型。填写 Key 后可作为自动模式候选。</small>
+          <label><span>API Key</span><input id="openaiKeyInput" type="password" placeholder="sk-..." /></label>
+        </div>
+        <div class="llm-card">
+          <strong>DeepSeek</strong>
+          <small>适合中文摘要和成本敏感场景。默认使用 deepseek-chat。</small>
+          <label><span>API Key</span><input id="deepseekKeyInput" type="password" placeholder="sk-..." /></label>
+          <label><span>Base URL</span><input id="deepseekBaseInput" type="text" value="https://api.deepseek.com" /></label>
+          <label><span>模型名称</span><input id="deepseekModelInput" type="text" value="deepseek-chat" /></label>
+        </div>
+        <div class="llm-card">
+          <strong>本地 Ollama</strong>
+          <small>适合本机离线测试。需要先启动 Ollama 服务。</small>
+          <label><span>Base URL</span><input id="ollamaBaseInput" type="text" value="http://localhost:11434/v1" /></label>
+          <label><span>模型名称</span><input id="ollamaModelInput" type="text" value="qwen2.5:7b" /></label>
+        </div>
       </div>
       <div class="profile-editor">
-        <small>配置仅保存到当前后端进程内存；重启服务后需要重新填写或写入 .env。</small>
+        <small>临时配置只保存在当前后端进程内存；重启服务后需要重新填写，或把 Key 写入 .env。</small>
         <button id="saveLlmConfigBtn" data-i18n="llmSave">${t("llmSave")}</button>
       </div>
     </section>
@@ -518,6 +564,16 @@ appEl.innerHTML = `
         <div id="keywordHitBox" class="keyword-hit">你关注的关键词今日命中 0 条事件</div>
       </aside>
     </section>
+    <section class="news-library">
+      <div class="library-head">
+        <div>
+          <h2>新闻库</h2>
+          <span id="newsLibraryCount">0 条缓存新闻</span>
+        </div>
+        <small>这里直接展示数据库缓存，不要求地图定位。</small>
+      </div>
+      <div id="newsLibraryList" class="news-library-list"></div>
+    </section>
     <aside class="floating-panel analysis-float open" id="analysisFloat">
       <div class="floating-head">
         <h2 data-i18n="analysisPanel">${t("analysisPanel")}</h2>
@@ -541,6 +597,8 @@ appEl.innerHTML = `
 const metricsEl = document.getElementById("metrics") as HTMLDivElement;
 const briefEl = document.getElementById("briefText") as HTMLDivElement;
 const convergenceEl = document.getElementById("convergenceList") as HTMLDivElement;
+const newsLibraryEl = document.getElementById("newsLibraryList") as HTMLDivElement;
+const newsLibraryCountEl = document.getElementById("newsLibraryCount") as HTMLSpanElement;
 const countryDetailEl = document.getElementById("countryDetail") as HTMLDivElement;
 const analysisDetailEl = document.getElementById("analysisDetail") as HTMLDivElement;
 const analysisFloatEl = document.getElementById("analysisFloat") as HTMLElement;
@@ -567,6 +625,7 @@ const timeRangeEl = document.getElementById("timeRange") as HTMLSelectElement;
 const llmSelectEl = document.getElementById("llmSelect") as HTMLSelectElement;
 const llmCheckBtn = document.getElementById("llmCheckBtn") as HTMLButtonElement;
 const llmStatusEl = document.getElementById("llmStatus") as HTMLSpanElement;
+const collectionStatusEl = document.getElementById("collectionStatus") as HTMLSpanElement;
 const saveLlmConfigBtn = document.getElementById("saveLlmConfigBtn") as HTMLButtonElement;
 const openaiKeyInput = document.getElementById("openaiKeyInput") as HTMLInputElement;
 const deepseekKeyInput = document.getElementById("deepseekKeyInput") as HTMLInputElement;
@@ -599,11 +658,13 @@ let map: any = null;
 let mapReady = false;
 let mapMarkers: any[] = [];
 let latestRenderedEvents: EventItem[] = [];
+let latestNewsItems: EventItem[] = [];
 let latestBriefItems: EventItem[] = [];
 let latestMapTotal = 0;
 let hoverPopup: any | null = null;
 let activeAction: "/collect" | "/geotag" | null = null;
 let activeActionController: AbortController | null = null;
+let collectionPollId: number | null = null;
 let briefSortKey: "risk_score" | "last_seen" | "source_count" | "event_count" = "risk_score";
 let currentIndustry: IndustryMode = (localStorage.getItem("worldpulse-industry") as IndustryMode | null) || "overview";
 let activeProfile: UserProfile | null = loadUserProfile();
@@ -683,6 +744,7 @@ function categoryText(value: string | null | undefined): string {
     protest_unrest: "抗议动荡",
     viral_topic: "热点选题",
     tariff_policy: "关税政策",
+    trade_policy: "贸易政策",
     customs_clearance: "海关清关",
     logistics_delay: "物流延误",
     port_disruption: "港口/航运中断",
@@ -692,6 +754,7 @@ function categoryText(value: string | null | undefined): string {
     supply_chain: "供应链",
     market_demand: "市场需求",
     compliance: "合规监管",
+    cybersecurity: "网络安全",
     politics: "政策",
     conflict: "制裁/冲突",
     finance: "汇率/油价",
@@ -713,6 +776,51 @@ function categoriesText(values: string[]): string {
 
 function locationText(country: string | null | undefined, city: string | null | undefined): string {
   return `${country || t("unknown")} · ${city || "无城市"}`;
+}
+
+function eventTimeValue(event: EventItem): string | null {
+  return event.last_seen || event.published_at || null;
+}
+
+function formatDateTime(value: string | null | undefined): string {
+  if (!value) return currentLanguage === "zh" ? "未知时间" : "Unknown time";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return currentLanguage === "zh" ? "时间格式异常" : "Invalid time";
+  return date.toLocaleString(currentLanguage === "zh" ? "zh-CN" : "en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function relativeTime(value: string | null | undefined): string {
+  if (!value) return currentLanguage === "zh" ? "未提供时间" : "No timestamp";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return currentLanguage === "zh" ? "时间无效" : "Invalid time";
+  const diffMinutes = Math.max(0, Math.round((Date.now() - date.getTime()) / 60000));
+  if (diffMinutes < 60) return currentLanguage === "zh" ? `${diffMinutes || 1} 分钟前` : `${diffMinutes || 1}m ago`;
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 48) return currentLanguage === "zh" ? `${diffHours} 小时前` : `${diffHours}h ago`;
+  const diffDays = Math.round(diffHours / 24);
+  return currentLanguage === "zh" ? `${diffDays} 天前` : `${diffDays}d ago`;
+}
+
+function freshnessClass(value: string | null | undefined): string {
+  if (!value) return "unknown";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "unknown";
+  const ageHours = (Date.now() - date.getTime()) / 3600000;
+  if (ageHours <= 24) return "fresh";
+  if (ageHours <= 72) return "aging";
+  return "stale";
+}
+
+function sourceSummary(item: EventItem): string {
+  const pieces = [`${item.source_count || 1} 个来源`];
+  if (typeof item.rss_count === "number") pieces.push(`RSS ${item.rss_count}`);
+  if (typeof item.gdelt_count === "number") pieces.push(`GDELT ${item.gdelt_count}`);
+  return pieces.join(" · ");
 }
 
 function affectedGroupsText(value: EventItem["affected_groups"]): string {
@@ -905,16 +1013,67 @@ async function ensureLlmReadyForAnalysis(): Promise<boolean> {
 async function showSourceHealthSummary(): Promise<void> {
   try {
     const data = await fetchJson<SourceHealthResponse>("/sources/health");
-    const topBad = data.items.filter((it) => it.status !== "ok").slice(0, 3);
+    const sorted = [...data.items].sort((a, b) => String(b.updated_at || "").localeCompare(String(a.updated_at || "")));
+    const topBad = sorted.filter((it) => it.status !== "ok").slice(0, 3);
+    const latest = sorted[0];
+    const latestText = latest ? `最近检查：${latest.source_name} · ${formatDateTime(latest.updated_at)} · ${relativeTime(latest.updated_at)}` : "暂无检查时间";
     if (!topBad.length) {
-      showStatus(`数据源健康：全部正常（${data.summary.ok}/${data.summary.total}）`, "success");
+      showStatus(`数据源健康：全部正常（${data.summary.ok}/${data.summary.total}）。${latestText}`, "success");
       return;
     }
-    const labels = topBad.map((it) => `${it.source_name}:${it.status}`).join("；");
-    showStatus(`数据源健康：异常 ${data.summary.degraded}/${data.summary.total}（${labels}）`, "error");
+    const labels = topBad.map((it) => `${it.source_name}:${it.status} · ${formatDateTime(it.updated_at)}`).join("；");
+    showStatus(`数据源健康：异常 ${data.summary.degraded}/${data.summary.total}（${labels}）。${latestText}`, "error");
   } catch (error) {
     showStatus(`${t("actionFailed")}: ${(error as Error).message}`, "error");
   }
+}
+
+async function refreshCollectionStatus(): Promise<void> {
+  try {
+    const status = await fetchJson<CollectionStatusResponse>("/collect/status");
+    collectionStatusEl.className = `collection-status ${status.running ? "running" : ""}`;
+    if (!status.enabled) {
+      collectionStatusEl.textContent = "自动采集已关闭";
+      return;
+    }
+    if (status.running) {
+      collectionStatusEl.textContent = "后台采集中";
+      return;
+    }
+    const last = status.last_finished_at ? `${relativeTime(status.last_finished_at)}更新` : "尚未自动更新";
+    const next = status.next_run_at ? `下次 ${formatDateTime(status.next_run_at)}` : `每 ${status.interval_minutes} 分钟`;
+    collectionStatusEl.textContent = `${last} · ${next}`;
+  } catch {
+    collectionStatusEl.className = "collection-status error";
+    collectionStatusEl.textContent = "采集状态不可用";
+  }
+}
+
+function startJobPolling(path: "/collect" | "/geotag"): void {
+  if (collectionPollId !== null) window.clearInterval(collectionPollId);
+  const statusPath = path === "/collect" ? "/collect/status" : "/process/status";
+  const workingLabel = path === "/collect" ? "后台采集中" : "后台定位处理中";
+  collectionPollId = window.setInterval(() => {
+    void (async () => {
+      const status = await fetchJson<CollectionStatusResponse>(statusPath);
+      if (path === "/collect") collectionStatusEl.className = `collection-status ${status.running ? "running" : ""}`;
+      if (status.running) {
+        if (path === "/collect") collectionStatusEl.textContent = workingLabel;
+        showStatus(status.last_message || workingLabel, "working");
+        return;
+      }
+      if (collectionPollId !== null) {
+        window.clearInterval(collectionPollId);
+        collectionPollId = null;
+      }
+      if (path === "/collect") await refreshCollectionStatus();
+      await loadFilters();
+      await loadDashboard();
+      showStatus(status.last_message || (path === "/collect" ? "后台采集完成" : "后台定位完成"), status.last_error ? "error" : "success");
+    })().catch((error) => {
+      showStatus(`${t("actionFailed")}: ${(error as Error).message}`, "error");
+    });
+  }, 2000);
 }
 
 async function saveLlmConfig(): Promise<void> {
@@ -1314,7 +1473,7 @@ function renderBriefTable(clusters: EventItem[] = [], briefText = ""): void {
   const relevant = activeProfile ? sorted.filter((item) => profileRelevanceScore(item) > 0).slice(0, 5) : [];
 
   briefEl.innerHTML = `
-    <pre class="brief-copy">${briefText}</pre>
+    <div class="brief-copy">${briefText || "暂无可展示的风险简报。"}</div>
     ${
       relevant.length
         ? `<div class="relevant-brief">
@@ -1347,21 +1506,53 @@ function renderBriefTable(clusters: EventItem[] = [], briefText = ""): void {
       <tbody>
         ${sorted
           .map(
-            (item) => `
+            (item) => {
+              const timestamp = eventTimeValue(item);
+              return `
           <tr data-event-id="${item.id}">
             <td><span class="risk-chip" style="background:${riskColor(item.risk_level)}">${riskText(item.risk_level)}</span><b>${item.risk_score || 0}</b></td>
             <td>${item.country || t("unknown")}<small>${item.city || "无城市"}</small></td>
             <td><strong>${displayTitle(item)}</strong><small>${categoryText(item.category)}</small>${renderRelevanceBadge(item)}${relevanceReasonText(item) ? `<small>${relevanceReasonText(item)}</small>` : ""}</td>
-            <td>${item.source_count || 1}<small>RSS ${item.rss_count || 0} / GDELT ${item.gdelt_count || 0}</small></td>
+            <td><span class="source-count">${item.source_count || 1}</span><small>${sourceSummary(item)}</small></td>
             <td>${item.event_count || 1}</td>
-            <td>${item.last_seen ? new Date(item.last_seen).toLocaleDateString() : "未知"}</td>
+            <td>
+              <span class="time-chip ${freshnessClass(timestamp)}">${relativeTime(timestamp)}</span>
+              <small>${formatDateTime(timestamp)}</small>
+            </td>
           </tr>
-        `,
+        `;
+            },
           )
           .join("")}
       </tbody>
     </table>
   `;
+}
+
+function renderNewsLibrary(items: EventItem[], total: number): void {
+  latestNewsItems = prioritizeEvents(items);
+  newsLibraryCountEl.textContent = `${total} 条缓存新闻 · 当前显示 ${latestNewsItems.length} 条`;
+  if (!latestNewsItems.length) {
+    newsLibraryEl.innerHTML = `<div class="brief-empty">当前筛选范围内暂无缓存新闻。</div>`;
+    return;
+  }
+  newsLibraryEl.innerHTML = latestNewsItems
+    .map((item) => {
+      const timestamp = eventTimeValue(item);
+      const mapped = typeof item.lat === "number" && typeof item.lon === "number";
+      return `
+        <button class="news-row" data-event-id="${item.id}">
+          <span class="risk-chip" style="background:${riskColor(item.risk_level)}">${riskText(item.risk_level)}</span>
+          <div>
+            <strong>${displayTitle(item)}</strong>
+            ${displayTitle(item) !== item.title ? `<em>${item.title}</em>` : ""}
+            <small>${item.source} · ${categoryText(item.category)} · ${relativeTime(timestamp)} · ${formatDateTime(timestamp)}</small>
+          </div>
+          <span class="map-state ${mapped ? "mapped" : ""}">${mapped ? "已定位" : "待定位"}</span>
+        </button>
+      `;
+    })
+    .join("");
 }
 
 function renderMap(events: EventItem[]): void {
@@ -1555,14 +1746,14 @@ function showEventPopup(event: EventItem): void {
   if (!mapReady || !maplibre || !map) return;
   hideEventPopup();
   const summary = event.summary || event.ai_summary || event.raw_summary || "";
-  const published = event.published_at ? new Date(event.published_at).toLocaleString() : "未知时间";
+  const timestamp = eventTimeValue(event);
   hoverPopup = new maplibre.Popup({ closeButton: false, closeOnClick: false, offset: 14, maxWidth: "320px" })
     .setLngLat([event.lon as number, event.lat as number])
     .setHTML(`
       <div class="intel-popup">
         <div class="intel-popup-meta">
           <span style="background:${riskColor(event.risk_level)}">${riskText(event.risk_level)}</span>
-          ${event.source} · ${published}
+          ${event.source} · ${relativeTime(timestamp)} · ${formatDateTime(timestamp)}
         </div>
         <strong>${displayTitle(event)}</strong>
         ${displayTitle(event) !== event.title ? `<small>${event.title}</small>` : ""}
@@ -1648,7 +1839,7 @@ function renderCountryDetail(insight: CountryInsight): void {
           (item) => `<a href="${item.url}" target="_blank" rel="noopener noreferrer">
           <b>${displayTitle(item)}</b>
           ${displayTitle(item) !== item.title ? `<em>${item.title}</em>` : ""}
-          <small>${item.source} · ${riskText(item.risk_level)}</small>
+          <small>${item.source} · ${riskText(item.risk_level)} · ${relativeTime(eventTimeValue(item))}</small>
         </a>`,
         )
         .join("")}
@@ -1682,10 +1873,24 @@ async function runAction(path: "/collect" | "/geotag"): Promise<void> {
 
   try {
     const result = await postJson<{ ok: boolean; message: string; count?: number }>(path, activeActionController.signal);
+    const isBackgroundJob = result.ok && result.count === 0 && result.message.includes("后台");
+    if (isBackgroundJob) {
+      showStatus(result.message, "working");
+      if (path === "/collect") {
+        collectionStatusEl.className = "collection-status running";
+        collectionStatusEl.textContent = "后台采集中";
+      }
+      startJobPolling(path);
+      return;
+    }
+    await refreshCollectionStatus();
     await loadFilters();
     await loadDashboard();
     const countText = typeof result.count === "number" ? ` · ${result.count}` : "";
-    showStatus(result.ok ? `${doneText}${countText}` : result.message, result.ok ? "success" : "error");
+    showStatus(
+      result.ok ? `${doneText}${countText}` : result.message,
+      result.ok ? "success" : "error",
+    );
   } catch (error) {
     if ((error as Error).name === "AbortError") {
       showStatus(t("cancelRequested"), "success");
@@ -1697,6 +1902,7 @@ async function runAction(path: "/collect" | "/geotag"): Promise<void> {
     activeActionController = null;
     setActionButtonsBusy(false);
     actionButton.textContent = originalText;
+    void refreshCollectionStatus();
   }
 }
 
@@ -1790,10 +1996,10 @@ function updateStaticLanguage(): void {
   sortByEl.options[2].textContent = t("sortSeverity");
   sortOrderEl.options[0].textContent = t("desc");
   sortOrderEl.options[1].textContent = t("asc");
-  llmSelectEl.options[0].textContent = "Auto";
+  llmSelectEl.options[0].textContent = currentLanguage === "zh" ? "自动选择" : "Auto";
   llmSelectEl.options[1].textContent = "OpenAI";
   llmSelectEl.options[2].textContent = "DeepSeek";
-  llmSelectEl.options[3].textContent = "Ollama";
+  llmSelectEl.options[3].textContent = currentLanguage === "zh" ? "本地 Ollama" : "Ollama";
   llmSelectEl.value = currentLlm;
   llmConfigBtn.textContent = t("llmConfig");
   llmCheckBtn.textContent = t("llmCheck");
@@ -1812,7 +2018,7 @@ function updateIndustryTabs(): void {
     button.classList.toggle("active", button.dataset.industry === currentIndustry);
   });
   const mode = INDUSTRIES[currentIndustry];
-  document.querySelector(".product-copy")!.textContent = `当前模式：${mode.name}。${mode.description}。自动监控全球新闻、政策、市场、科技、供应链和地缘事件，并生成中文影响分析。`;
+  document.querySelector(".product-copy")!.textContent = `当前模式：${mode.name}。面向${mode.description}，筛出有时间、有来源、有地理位置的全球事件信号。`;
 }
 
 async function switchIndustry(industry: IndustryMode): Promise<void> {
@@ -1855,13 +2061,15 @@ async function loadDashboard(): Promise<void> {
   try {
     const range = timeRangeEl.value;
     const profileParam = activeProfile ? `&profile=${encodeURIComponent(profileQueryParam())}` : "";
-    const [metrics, brief, mapEvents] = await Promise.all([
+    const [metrics, brief, mapEvents, newsEvents] = await Promise.all([
       fetchJson<Metrics>(`/metrics?time_range=${range}&industry=${currentIndustry}`),
       fetchJson<BriefResponse>(`/brief?time_range=${range}&industry=${currentIndustry}${profileParam}`),
       fetchJson<MapEventsResponse>(`/map-events?${buildSignalQuery()}`),
+      fetchJson<EventsResponse>(`/events?${buildSignalQuery()}&page_size=80`),
     ]);
     renderMetrics(metrics);
     renderBriefTable(brief.clusters || [], brief.brief);
+    renderNewsLibrary(newsEvents.items, newsEvents.total);
     briefFloatEl.classList.add("open");
     renderConvergences(brief.convergences);
     renderMap(mapEvents.items);
@@ -1954,6 +2162,14 @@ briefEl.addEventListener("click", (ev) => {
   openSignalItem(item);
 });
 
+newsLibraryEl.addEventListener("click", (ev) => {
+  const row = (ev.target as HTMLElement).closest(".news-row") as HTMLButtonElement | null;
+  if (!row) return;
+  const item = latestNewsItems.find((event) => event.id === row.dataset.eventId);
+  if (!item) return;
+  openSignalItem(item);
+});
+
 collectBtn.addEventListener("click", () => void runAction("/collect"));
 analyzeBtn.addEventListener("click", () => void runAction("/geotag"));
 profileBtn.addEventListener("click", () => {
@@ -2004,6 +2220,8 @@ clearCountryBtn.addEventListener("click", () => {
 keywordInputEl.value = loadKeywords().join("\n");
 updateStaticLanguage();
 void refreshLlmStatus();
+void refreshCollectionStatus();
+window.setInterval(() => void refreshCollectionStatus(), 60000);
 void (async () => {
   try {
     await initMap();

@@ -46,13 +46,21 @@ class GDELTCollector:
 
         total_new = 0
         seen_urls = set()
-        for query_config in queries:
+        self.rate_limited = False
+        max_queries = int(config.get("max_queries_per_run", len(queries)))
+        per_query_delay = float(config.get("per_query_delay_seconds", 0))
+        for index, query_config in enumerate(queries[:max_queries]):
             if self._is_cancelled():
                 logger.info("GDELT collection cancelled.")
+                break
+            if self.rate_limited:
+                logger.info("GDELT collection paused because the API rate limit was reached.")
                 break
             query = query_config.get("query")
             if not query:
                 continue
+            if index > 0 and per_query_delay > 0:
+                time.sleep(per_query_delay)
 
             articles = self._fetch_articles(
                 query=query,
@@ -78,6 +86,9 @@ class GDELTCollector:
                     total_new += 1
 
             logger.info(f"GDELT query '{query}' returned {len(articles)} articles.")
+            if self.rate_limited:
+                logger.info("Stopping remaining GDELT queries for this run after rate limit response.")
+                break
 
         logger.info(f"GDELT collection finished. Added {total_new} new events.")
         return total_new
@@ -124,6 +135,21 @@ class GDELTCollector:
                 "accepted_count": len(articles) if isinstance(articles, list) else 0,
             })
             return articles if isinstance(articles, list) else []
+        except requests.exceptions.HTTPError as e:
+            status_code = e.response.status_code if e.response is not None else None
+            status = "rate_limited" if status_code == 429 else "http_error"
+            if status_code == 429:
+                self.rate_limited = True
+            logger.warning(f"GDELT query failed and was skipped: {query}: {e}")
+            self.db.record_source_health({
+                "source_name": f"GDELT:{query[:60]}",
+                "source_type": "gdelt",
+                "endpoint": self.api_url,
+                "status": status,
+                "latency_ms": int((time.perf_counter() - started) * 1000),
+                "http_code": status_code,
+                "error_message": str(e),
+            })
         except requests.exceptions.Timeout:
             logger.warning(f"GDELT query timed out and was skipped: {query}")
             self.db.record_source_health({
