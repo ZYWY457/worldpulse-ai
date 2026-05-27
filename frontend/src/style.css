@@ -581,6 +581,10 @@ select:disabled {
   font-size: 11px;
 }
 
+.news-row .time-line {
+  color: #465168;
+}
+
 .map-state {
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -698,27 +702,29 @@ select:disabled {
 }
 
 .map-dot {
-  border: 1px solid #1a1f2b;
+  display: grid;
+  place-items: center;
+  border: 2px solid #fff;
   border-radius: 999px;
-  opacity: 0.85;
+  opacity: 0.94;
   cursor: pointer;
   padding: 0;
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.78), 0 8px 20px rgba(26, 31, 43, 0.18);
-  transition: transform 0.12s ease, opacity 0.12s ease;
+  box-shadow: 0 0 0 1px rgba(26, 31, 43, 0.35), 0 8px 18px rgba(26, 31, 43, 0.24);
+  transition: transform 0.12s ease, opacity 0.12s ease, box-shadow 0.12s ease;
 }
 
 .map-dot:hover {
   opacity: 1;
-  transform: scale(1.2);
+  transform: scale(1.18);
+  box-shadow: 0 0 0 2px rgba(26, 31, 43, 0.35), 0 10px 22px rgba(26, 31, 43, 0.28);
 }
 
 .cluster-dot {
   color: #fff;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
-  display: grid;
-  place-items: center;
   background: #1d3557;
+  border-color: #fff;
 }
 
 .intel-popup {

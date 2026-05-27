@@ -6,6 +6,8 @@ type EventItem = {
   url: string;
   source: string;
   published_at: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
   ai_summary: string | null;
   raw_summary: string | null;
   category: string | null;
@@ -531,6 +533,16 @@ appEl.innerHTML = `
       </select>
     </section>
     <section class="metrics" id="metrics"></section>
+    <section class="news-library">
+      <div class="library-head">
+        <div>
+          <h2>新闻库</h2>
+          <span id="newsLibraryCount">0 条缓存新闻</span>
+        </div>
+        <small>按原文发布时间排序；入库后立即展示，地图定位会稍后补齐。</small>
+      </div>
+      <div id="newsLibraryList" class="news-library-list"></div>
+    </section>
     <section class="map-workspace">
       <article class="map-panel">
         <div class="map-titlebar">
@@ -563,16 +575,6 @@ appEl.innerHTML = `
         <textarea id="keywordInput" rows="5" spellcheck="false"></textarea>
         <div id="keywordHitBox" class="keyword-hit">你关注的关键词今日命中 0 条事件</div>
       </aside>
-    </section>
-    <section class="news-library">
-      <div class="library-head">
-        <div>
-          <h2>新闻库</h2>
-          <span id="newsLibraryCount">0 条缓存新闻</span>
-        </div>
-        <small>这里直接展示数据库缓存，不要求地图定位。</small>
-      </div>
-      <div id="newsLibraryList" class="news-library-list"></div>
     </section>
     <aside class="floating-panel analysis-float open" id="analysisFloat">
       <div class="floating-head">
@@ -782,6 +784,10 @@ function eventTimeValue(event: EventItem): string | null {
   return event.last_seen || event.published_at || null;
 }
 
+function cacheTimeValue(event: EventItem): string | null {
+  return event.created_at || event.updated_at || null;
+}
+
 function formatDateTime(value: string | null | undefined): string {
   if (!value) return currentLanguage === "zh" ? "未知时间" : "Unknown time";
   const date = new Date(value);
@@ -861,7 +867,30 @@ function suggestedActionText(event: EventItem): string {
 function displayTitle(event: EventItem): string {
   if (event.ai_summary) return event.ai_summary;
   if (currentLanguage === "zh" && event.summary && /[\u4e00-\u9fa5]/.test(event.summary)) return event.summary;
+  if (currentLanguage === "zh") return zhSignalTitle(event);
   return localizeHeadline(event.title);
+}
+
+function zhSignalTitle(event: EventItem): string {
+  const title = event.title || "";
+  const category = categoryText(event.category);
+  const location = event.country || event.city ? locationText(event.country, event.city) : "全球";
+  const source = event.source ? event.source.replace(/^GDELT\s*\/\s*/i, "") : "新闻源";
+  const lowered = title.toLowerCase();
+  const topicRules: Array<[RegExp, string]> = [
+    [/tariff|customs|dut(y|ies)|de minimis|trade/i, "贸易/关税信号"],
+    [/sanction|export control|ofac|embargo/i, "制裁/出口管制信号"],
+    [/shipping|port|logistics|container|red sea|suez/i, "物流/航运信号"],
+    [/central bank|interest rate|inflation|cpi|monetary/i, "宏观金融信号"],
+    [/cyber|ransomware|data breach|hack|malware/i, "网络安全信号"],
+    [/ai|artificial intelligence|chip|semiconductor|gpu|data center/i, "科技/AI 信号"],
+    [/war|missile|drone|attack|ceasefire|military/i, "地缘冲突信号"],
+    [/protest|strike|unrest|riot|election/i, "社会/政治风险信号"],
+    [/oil|crude|gas|energy/i, "能源价格信号"],
+    [/factory|plant|production|shutdown/i, "工厂/生产信号"],
+  ];
+  const topic = topicRules.find(([pattern]) => pattern.test(lowered))?.[1] || `${category}信号`;
+  return `${location} · ${topic}（${source}）`;
 }
 
 function localizeHeadline(title: string): string {
@@ -1539,14 +1568,16 @@ function renderNewsLibrary(items: EventItem[], total: number): void {
   newsLibraryEl.innerHTML = latestNewsItems
     .map((item) => {
       const timestamp = eventTimeValue(item);
+      const cacheTimestamp = cacheTimeValue(item);
       const mapped = typeof item.lat === "number" && typeof item.lon === "number";
       return `
         <button class="news-row" data-event-id="${item.id}">
           <span class="risk-chip" style="background:${riskColor(item.risk_level)}">${riskText(item.risk_level)}</span>
           <div>
             <strong>${displayTitle(item)}</strong>
-            ${displayTitle(item) !== item.title ? `<em>${item.title}</em>` : ""}
-            <small>${item.source} · ${categoryText(item.category)} · ${relativeTime(timestamp)} · ${formatDateTime(timestamp)}</small>
+            ${item.title ? `<em>${item.title}</em>` : ""}
+            <small>${item.source} · ${categoryText(item.category)}</small>
+            <small class="time-line">原文时间：${formatDateTime(timestamp)}（${relativeTime(timestamp)}）${cacheTimestamp ? ` · 入库：${formatDateTime(cacheTimestamp)}` : ""}</small>
           </div>
           <span class="map-state ${mapped ? "mapped" : ""}">${mapped ? "已定位" : "待定位"}</span>
         </button>
@@ -1576,8 +1607,9 @@ function renderMap(events: EventItem[]): void {
     if (point.kind === "cluster") {
       const dot = document.createElement("button");
       dot.className = "map-dot cluster-dot";
-      dot.style.width = "24px";
-      dot.style.height = "24px";
+      const clusterSize = Math.max(28, Math.min(46, 24 + Math.sqrt(point.count) * 6));
+      dot.style.width = `${clusterSize}px`;
+      dot.style.height = `${clusterSize}px`;
       dot.textContent = String(point.count);
       dot.title = `${point.count} ${t("events")}`;
       dot.addEventListener("click", () => {
@@ -1595,7 +1627,7 @@ function renderMap(events: EventItem[]): void {
     const event = point.event;
       const dot = document.createElement("button");
       dot.className = "map-dot";
-      const size = Math.max(10, (event.severity || 1) * 4);
+      const size = Math.max(14, Math.min(24, 10 + (event.severity || 1) * 3));
       dot.style.width = `${size}px`;
       dot.style.height = `${size}px`;
       dot.style.background = riskColor(event.risk_level);
@@ -1666,7 +1698,7 @@ function renderAnalysisDetail(event: EventItem, isLoading = false): void {
         <span>${statusText(event.status)}</span>
       </div>
       <h3>${displayTitle(event)}</h3>
-      ${displayTitle(event) !== event.title ? `<div class="original-title">${event.title}</div>` : ""}
+      ${event.title ? `<div class="original-title">${event.title}</div>` : ""}
       <p>${isLoading ? t("analyzingOne") : summary}</p>
       <div class="analysis-meta">
         <span>国家/城市：${locationText(event.country, event.city)}</span>
@@ -1701,7 +1733,7 @@ function renderClusterDetail(events: EventItem[]): void {
           <button class="cluster-event-row" data-event-id="${event.id}">
             <span class="pill" style="background:${riskColor(event.risk_level)}">${riskText(event.risk_level)}</span>
             <b>${displayTitle(event)}</b>
-            ${displayTitle(event) !== event.title ? `<small>${event.title}</small>` : ""}
+            ${event.title ? `<small>${event.title}</small>` : ""}
             <em>${event.source} · ${categoryText(event.category)} · 严重度 ${event.severity || 1}</em>
           </button>
         `,
@@ -1756,7 +1788,7 @@ function showEventPopup(event: EventItem): void {
           ${event.source} · ${relativeTime(timestamp)} · ${formatDateTime(timestamp)}
         </div>
         <strong>${displayTitle(event)}</strong>
-        ${displayTitle(event) !== event.title ? `<small>${event.title}</small>` : ""}
+        ${event.title ? `<small>${event.title}</small>` : ""}
         <p>${summary.slice(0, 220) || t("noSummary")}</p>
         <small>${locationText(event.country, event.city)} · ${categoryText(event.category)}</small>
         ${renderRelevanceBadge(event)}
@@ -1838,7 +1870,7 @@ function renderCountryDetail(insight: CountryInsight): void {
         .map(
           (item) => `<a href="${item.url}" target="_blank" rel="noopener noreferrer">
           <b>${displayTitle(item)}</b>
-          ${displayTitle(item) !== item.title ? `<em>${item.title}</em>` : ""}
+          ${item.title ? `<em>${item.title}</em>` : ""}
           <small>${item.source} · ${riskText(item.risk_level)} · ${relativeTime(eventTimeValue(item))}</small>
         </a>`,
         )
