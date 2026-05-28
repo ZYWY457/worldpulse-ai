@@ -1,5 +1,6 @@
 import threading
 from datetime import datetime, timedelta
+from datetime import time as datetime_time
 from typing import Callable
 
 
@@ -11,6 +12,7 @@ class NewsScheduler:
         enabled: bool = True,
         interval_minutes: int = 60,
         startup_delay_seconds: int = 15,
+        daily_run_at: str | None = None,
         job_label: str = "采集",
     ):
         self.job = job
@@ -18,6 +20,7 @@ class NewsScheduler:
         self.enabled = enabled
         self.interval_minutes = max(5, interval_minutes)
         self.startup_delay_seconds = max(0, startup_delay_seconds)
+        self.daily_run_time = self._parse_daily_run_at(daily_run_at)
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
         self._job_lock = threading.Lock()
@@ -77,6 +80,17 @@ class NewsScheduler:
             return dict(self._state)
 
     def _loop(self) -> None:
+        if self.daily_run_time:
+            while not self._stop_event.is_set():
+                next_run = self._next_daily_run(datetime.now())
+                with self._state_lock:
+                    self._state["next_run_at"] = next_run.isoformat()
+                wait_seconds = max(0.0, (next_run - datetime.now()).total_seconds())
+                if self._stop_event.wait(wait_seconds):
+                    return
+                self.run_now(source="scheduled")
+            return
+
         if self._stop_event.wait(self.startup_delay_seconds):
             return
         while not self._stop_event.is_set():
@@ -85,6 +99,32 @@ class NewsScheduler:
             with self._state_lock:
                 self._state["next_run_at"] = next_run.isoformat()
             self._stop_event.wait(self.interval_minutes * 60)
+
+    def _parse_daily_run_at(self, value: str | None) -> datetime_time | None:
+        if not value:
+            return None
+        try:
+            hour_text, minute_text = value.strip().split(":", 1)
+            hour = int(hour_text)
+            minute = int(minute_text)
+            if 0 <= hour <= 23 and 0 <= minute <= 59:
+                return datetime_time(hour=hour, minute=minute)
+        except ValueError:
+            pass
+        return None
+
+    def _next_daily_run(self, now: datetime) -> datetime:
+        if not self.daily_run_time:
+            return now + timedelta(minutes=self.interval_minutes)
+        next_run = now.replace(
+            hour=self.daily_run_time.hour,
+            minute=self.daily_run_time.minute,
+            second=0,
+            microsecond=0,
+        )
+        if next_run <= now:
+            next_run += timedelta(days=1)
+        return next_run
 
     def _mark_running(self, source: str) -> None:
         now = datetime.now().isoformat()

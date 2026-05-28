@@ -68,7 +68,8 @@ WorldPulse 的数据流分为三层，避免采集和展示互相阻塞：
 
 ```env
 AUTO_COLLECT_ENABLED=true
-AUTO_COLLECT_INTERVAL_MINUTES=60
+AUTO_COLLECT_DAILY_AT=08:00
+AUTO_COLLECT_INTERVAL_MINUTES=1440
 AUTO_COLLECT_STARTUP_DELAY_SECONDS=20
 AUTO_GEOTAG_LIMIT=200
 AUTO_PROCESS_ENABLED=true
@@ -76,7 +77,7 @@ AUTO_PROCESS_INTERVAL_MINUTES=15
 AUTO_PROCESS_STARTUP_DELAY_SECONDS=90
 ```
 
-采集到的新闻会写入 `storage/worldpulse.db`，前端用户共享同一份缓存；用户刷新页面不会重复请求新闻源。`AUTO_COLLECT_INTERVAL_MINUTES` 最小按 5 分钟执行，建议生产环境设置为 30-120 分钟。
+采集到的新闻会写入 `storage/worldpulse.db`，前端用户共享同一份缓存；用户刷新页面不会重复请求新闻源。默认每天本地时间 `08:00` 自动采集一次，前端会直接读取缓存并在后台采集完成后自动刷新新闻库。`AUTO_COLLECT_DAILY_AT` 留空时才会按 `AUTO_COLLECT_INTERVAL_MINUTES` 间隔执行。
 
 免费新闻源：
 

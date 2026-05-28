@@ -3,6 +3,7 @@ import "./style.css";
 type EventItem = {
   id: string;
   title: string;
+  title_zh?: string | null;
   url: string;
   source: string;
   published_at: string | null;
@@ -41,6 +42,7 @@ type EventItem = {
   gdelt_count?: number | null;
   rss_count?: number | null;
   summary?: string | null;
+  summary_zh?: string | null;
   last_seen?: string | null;
 };
 
@@ -68,11 +70,6 @@ type BriefResponse = {
 };
 
 type MapEventsResponse = {
-  items: EventItem[];
-  total: number;
-};
-
-type EventsResponse = {
   items: EventItem[];
   total: number;
 };
@@ -533,78 +530,78 @@ appEl.innerHTML = `
       </select>
     </section>
     <section class="metrics" id="metrics"></section>
-    <section class="news-library">
-      <div class="library-head">
-        <div>
-          <h2>新闻库</h2>
-          <span id="newsLibraryCount">0 条缓存新闻</span>
-        </div>
-        <small>按原文发布时间排序；入库后立即展示，地图定位会稍后补齐。</small>
-      </div>
-      <div id="newsLibraryList" class="news-library-list"></div>
-    </section>
     <section class="map-workspace">
-      <article class="map-panel">
-        <div class="map-titlebar">
-          <div>
-            <h2 data-i18n="mapTitle">${t("mapTitle")}</h2>
-            <span id="mapCount">0 ${t("mappedSignals")}</span>
+      <div class="map-main-column">
+        <article class="map-panel">
+          <div class="map-titlebar">
+            <div>
+              <h2 data-i18n="mapTitle">${t("mapTitle")}</h2>
+              <span id="mapCount">0 ${t("mappedSignals")}</span>
+            </div>
+            <div class="map-controls">
+              <label><input type="checkbox" id="layerLow" checked /> <span data-i18n="low">${t("low")}</span></label>
+              <label><input type="checkbox" id="layerMedium" checked /> <span data-i18n="medium">${t("medium")}</span></label>
+              <label><input type="checkbox" id="layerHigh" checked /> <span data-i18n="high">${t("high")}</span></label>
+              <label><input type="checkbox" id="layerCritical" checked /> <span data-i18n="critical">${t("critical")}</span></label>
+              <label><input type="checkbox" id="clusterMode" checked /> <span data-i18n="cluster">${t("cluster")}</span></label>
+            </div>
           </div>
-          <div class="map-controls">
-            <label><input type="checkbox" id="layerLow" checked /> <span data-i18n="low">${t("low")}</span></label>
-            <label><input type="checkbox" id="layerMedium" checked /> <span data-i18n="medium">${t("medium")}</span></label>
-            <label><input type="checkbox" id="layerHigh" checked /> <span data-i18n="high">${t("high")}</span></label>
-            <label><input type="checkbox" id="layerCritical" checked /> <span data-i18n="critical">${t("critical")}</span></label>
-            <label><input type="checkbox" id="clusterMode" checked /> <span data-i18n="cluster">${t("cluster")}</span></label>
+          <div id="map"></div>
+        </article>
+        <aside class="floating-panel analysis-float" id="analysisFloat">
+          <div class="floating-head">
+            <h2 data-i18n="analysisPanel">${t("analysisPanel")}</h2>
+            <button id="closeAnalysisBtn" class="tiny-btn">关闭</button>
           </div>
-        </div>
-        <div id="map"></div>
-      </article>
-      <aside class="panel country-panel">
-        <div class="country-head">
-          <h2 data-i18n="countryFocus">${t("countryFocus")}</h2>
-          <button id="clearCountryBtn" class="tiny-btn" data-i18n="clear">${t("clear")}</button>
-        </div>
-        <div id="countryDetail">${t("countryEmpty")}</div>
-      </aside>
-      <aside class="panel keyword-panel">
-        <div class="country-head">
-          <h2>关键词关注</h2>
-          <button id="saveKeywordsBtn" class="tiny-btn">保存</button>
-        </div>
-        <textarea id="keywordInput" rows="5" spellcheck="false"></textarea>
-        <div id="keywordHitBox" class="keyword-hit">你关注的关键词今日命中 0 条事件</div>
-      </aside>
+          <div id="analysisDetail" class="floating-body">${t("clickMapPoint")}</div>
+        </aside>
+      </div>
+      <div class="insight-rail">
+        <aside class="side-panel">
+          <div class="side-tabs" aria-label="右侧信息面板">
+            <button class="active" data-side-tab="brief">简报</button>
+            <button data-side-tab="country">国家</button>
+            <button data-side-tab="keywords">关键词</button>
+          </div>
+          <section class="side-pane active" data-side-panel="brief" id="briefFloat">
+            <div class="pane-head">
+              <h2 data-i18n="briefTitle">${t("briefTitle")}</h2>
+              <button id="closeBriefBtn" class="tiny-btn">收起</button>
+            </div>
+            <div class="pane-body">
+              <div id="briefText">${t("loading")}</div>
+              <div id="convergenceList"></div>
+            </div>
+          </section>
+          <section class="side-pane" data-side-panel="country">
+            <div class="pane-head">
+              <h2 data-i18n="countryFocus">${t("countryFocus")}</h2>
+              <button id="clearCountryBtn" class="tiny-btn" data-i18n="clear">${t("clear")}</button>
+            </div>
+            <div id="countryDetail" class="pane-body">${t("countryEmpty")}</div>
+          </section>
+          <section class="side-pane" data-side-panel="keywords">
+            <div class="pane-head">
+              <h2>关键词关注</h2>
+              <button id="saveKeywordsBtn" class="tiny-btn">保存</button>
+            </div>
+            <div class="pane-body keyword-pane-body">
+              <textarea id="keywordInput" rows="5" spellcheck="false"></textarea>
+              <div id="keywordHitBox" class="keyword-hit">你关注的关键词今日命中 0 条事件</div>
+            </div>
+          </section>
+        </aside>
+      </div>
     </section>
-    <aside class="floating-panel analysis-float open" id="analysisFloat">
-      <div class="floating-head">
-        <h2 data-i18n="analysisPanel">${t("analysisPanel")}</h2>
-        <button id="closeAnalysisBtn" class="tiny-btn">关闭</button>
-      </div>
-      <div id="analysisDetail" class="floating-body">${t("clickMapPoint")}</div>
-    </aside>
-    <aside class="floating-panel brief-float open" id="briefFloat">
-      <div class="floating-head">
-        <h2 data-i18n="briefTitle">${t("briefTitle")}</h2>
-        <button id="closeBriefBtn" class="tiny-btn">关闭</button>
-      </div>
-      <div class="floating-body">
-        <div id="briefText">${t("loading")}</div>
-        <div id="convergenceList"></div>
-      </div>
-    </aside>
   </main>
 `;
 
 const metricsEl = document.getElementById("metrics") as HTMLDivElement;
 const briefEl = document.getElementById("briefText") as HTMLDivElement;
 const convergenceEl = document.getElementById("convergenceList") as HTMLDivElement;
-const newsLibraryEl = document.getElementById("newsLibraryList") as HTMLDivElement;
-const newsLibraryCountEl = document.getElementById("newsLibraryCount") as HTMLSpanElement;
 const countryDetailEl = document.getElementById("countryDetail") as HTMLDivElement;
 const analysisDetailEl = document.getElementById("analysisDetail") as HTMLDivElement;
 const analysisFloatEl = document.getElementById("analysisFloat") as HTMLElement;
-const briefFloatEl = document.getElementById("briefFloat") as HTMLElement;
 const closeAnalysisBtn = document.getElementById("closeAnalysisBtn") as HTMLButtonElement;
 const closeBriefBtn = document.getElementById("closeBriefBtn") as HTMLButtonElement;
 const mapCountEl = document.getElementById("mapCount") as HTMLSpanElement;
@@ -621,6 +618,8 @@ const keywordInputEl = document.getElementById("keywordInput") as HTMLTextAreaEl
 const keywordHitBoxEl = document.getElementById("keywordHitBox") as HTMLDivElement;
 const saveKeywordsBtn = document.getElementById("saveKeywordsBtn") as HTMLButtonElement;
 const industryTabsEl = document.querySelector(".industry-tabs") as HTMLElement;
+const sideTabEls = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-side-tab]"));
+const sidePanelEls = Array.from(document.querySelectorAll<HTMLElement>("[data-side-panel]"));
 
 const languageSelectEl = document.getElementById("languageSelect") as HTMLSelectElement;
 const timeRangeEl = document.getElementById("timeRange") as HTMLSelectElement;
@@ -660,13 +659,15 @@ let map: any = null;
 let mapReady = false;
 let mapMarkers: any[] = [];
 let latestRenderedEvents: EventItem[] = [];
-let latestNewsItems: EventItem[] = [];
 let latestBriefItems: EventItem[] = [];
 let latestMapTotal = 0;
 let hoverPopup: any | null = null;
 let activeAction: "/collect" | "/geotag" | null = null;
 let activeActionController: AbortController | null = null;
 let collectionPollId: number | null = null;
+let lastCollectionRunCount: number | null = null;
+let lastCollectionFinishedAt: string | null = null;
+let reloadingAfterAutoCollection = false;
 let briefSortKey: "risk_score" | "last_seen" | "source_count" | "event_count" = "risk_score";
 let currentIndustry: IndustryMode = (localStorage.getItem("worldpulse-industry") as IndustryMode | null) || "overview";
 let activeProfile: UserProfile | null = loadUserProfile();
@@ -784,10 +785,6 @@ function eventTimeValue(event: EventItem): string | null {
   return event.last_seen || event.published_at || null;
 }
 
-function cacheTimeValue(event: EventItem): string | null {
-  return event.created_at || event.updated_at || null;
-}
-
 function formatDateTime(value: string | null | undefined): string {
   if (!value) return currentLanguage === "zh" ? "未知时间" : "Unknown time";
   const date = new Date(value);
@@ -865,10 +862,27 @@ function suggestedActionText(event: EventItem): string {
 }
 
 function displayTitle(event: EventItem): string {
+  if (currentLanguage === "zh" && event.title_zh) return event.title_zh;
   if (event.ai_summary) return event.ai_summary;
   if (currentLanguage === "zh" && event.summary && /[\u4e00-\u9fa5]/.test(event.summary)) return event.summary;
   if (currentLanguage === "zh") return zhSignalTitle(event);
   return localizeHeadline(event.title);
+}
+
+function displayOriginalTitle(event: EventItem): string {
+  if (currentLanguage === "zh" && event.title_zh) return event.title_zh;
+  if (!event.title) return "";
+  return currentLanguage === "zh" ? localizeHeadline(event.title) : event.title;
+}
+
+function displaySummary(event: EventItem): string {
+  if (currentLanguage === "zh" && event.summary_zh) return event.summary_zh;
+  const candidates = [event.ai_summary, event.summary, event.raw_summary].filter((item): item is string => Boolean(item && item.trim()));
+  if (!candidates.length) return t("noSummary");
+  if (currentLanguage !== "zh") return candidates[0];
+  const zhText = candidates.find((text) => /[\u4e00-\u9fa5]/.test(text));
+  if (zhText) return zhText;
+  return localizeHeadline(candidates[0]);
 }
 
 function zhSignalTitle(event: EventItem): string {
@@ -1061,6 +1075,10 @@ async function refreshCollectionStatus(): Promise<void> {
   try {
     const status = await fetchJson<CollectionStatusResponse>("/collect/status");
     collectionStatusEl.className = `collection-status ${status.running ? "running" : ""}`;
+    const previousRunCount = lastCollectionRunCount;
+    const previousFinishedAt = lastCollectionFinishedAt;
+    lastCollectionRunCount = status.run_count;
+    lastCollectionFinishedAt = status.last_finished_at;
     if (!status.enabled) {
       collectionStatusEl.textContent = "自动采集已关闭";
       return;
@@ -1072,6 +1090,18 @@ async function refreshCollectionStatus(): Promise<void> {
     const last = status.last_finished_at ? `${relativeTime(status.last_finished_at)}更新` : "尚未自动更新";
     const next = status.next_run_at ? `下次 ${formatDateTime(status.next_run_at)}` : `每 ${status.interval_minutes} 分钟`;
     collectionStatusEl.textContent = `${last} · ${next}`;
+    const finishedNewRun = previousRunCount !== null && status.run_count > previousRunCount;
+    const finishedAtChanged = previousFinishedAt !== null && status.last_finished_at !== previousFinishedAt;
+    if (!activeAction && !reloadingAfterAutoCollection && (finishedNewRun || finishedAtChanged)) {
+      reloadingAfterAutoCollection = true;
+      try {
+        await loadFilters();
+        await loadDashboard();
+        showStatus("自动采集完成，新闻库已更新", status.last_error ? "error" : "success");
+      } finally {
+        reloadingAfterAutoCollection = false;
+      }
+    }
   } catch {
     collectionStatusEl.className = "collection-status error";
     collectionStatusEl.textContent = "采集状态不可用";
@@ -1558,34 +1588,6 @@ function renderBriefTable(clusters: EventItem[] = [], briefText = ""): void {
   `;
 }
 
-function renderNewsLibrary(items: EventItem[], total: number): void {
-  latestNewsItems = prioritizeEvents(items);
-  newsLibraryCountEl.textContent = `${total} 条缓存新闻 · 当前显示 ${latestNewsItems.length} 条`;
-  if (!latestNewsItems.length) {
-    newsLibraryEl.innerHTML = `<div class="brief-empty">当前筛选范围内暂无缓存新闻。</div>`;
-    return;
-  }
-  newsLibraryEl.innerHTML = latestNewsItems
-    .map((item) => {
-      const timestamp = eventTimeValue(item);
-      const cacheTimestamp = cacheTimeValue(item);
-      const mapped = typeof item.lat === "number" && typeof item.lon === "number";
-      return `
-        <button class="news-row" data-event-id="${item.id}">
-          <span class="risk-chip" style="background:${riskColor(item.risk_level)}">${riskText(item.risk_level)}</span>
-          <div>
-            <strong>${displayTitle(item)}</strong>
-            ${item.title ? `<em>${item.title}</em>` : ""}
-            <small>${item.source} · ${categoryText(item.category)}</small>
-            <small class="time-line">原文时间：${formatDateTime(timestamp)}（${relativeTime(timestamp)}）${cacheTimestamp ? ` · 入库：${formatDateTime(cacheTimestamp)}` : ""}</small>
-          </div>
-          <span class="map-state ${mapped ? "mapped" : ""}">${mapped ? "已定位" : "待定位"}</span>
-        </button>
-      `;
-    })
-    .join("");
-}
-
 function renderMap(events: EventItem[]): void {
   latestRenderedEvents = prioritizeEvents(events);
   if (!mapReady || !maplibre || !map) return;
@@ -1607,19 +1609,26 @@ function renderMap(events: EventItem[]): void {
     if (point.kind === "cluster") {
       const dot = document.createElement("button");
       dot.className = "map-dot cluster-dot";
-      const clusterSize = Math.max(28, Math.min(46, 24 + Math.sqrt(point.count) * 6));
+      const clusterSize = Math.max(26, Math.min(42, 24 + Math.sqrt(point.count) * 5));
       dot.style.width = `${clusterSize}px`;
       dot.style.height = `${clusterSize}px`;
       dot.textContent = String(point.count);
       dot.title = `${point.count} ${t("events")}`;
+      dot.setAttribute("aria-label", `${point.count} ${t("events")}`);
+      dot.addEventListener("mouseenter", () => showClusterPopup(point));
+      dot.addEventListener("mouseleave", hideEventPopup);
       dot.addEventListener("click", () => {
+        hideEventPopup();
         if (point.sample.country) setActiveCountry(point.sample.country);
         renderClusterDetail(point.events);
+        map.easeTo({
+          center: [point.lon, point.lat],
+          zoom: Math.min((map.getZoom?.() || 1) + 1.4, 5.5),
+          duration: 500,
+        });
       });
-      const popup = new maplibre.Popup({ offset: 8 }).setHTML(`<strong>${point.count} ${t("events")}</strong><br/>${point.sample.country || t("mixed")} ${t("cluster").toLowerCase()}`);
       const marker = new maplibre.Marker({ element: dot, anchor: "center" })
         .setLngLat([point.lon, point.lat])
-        .setPopup(popup)
         .addTo(map);
       mapMarkers.push(marker);
       return;
@@ -1627,15 +1636,23 @@ function renderMap(events: EventItem[]): void {
     const event = point.event;
       const dot = document.createElement("button");
       dot.className = "map-dot";
-      const size = Math.max(14, Math.min(24, 10 + (event.severity || 1) * 3));
+      dot.dataset.risk = (event.risk_level || "low").toLowerCase();
+      const size = Math.max(12, Math.min(22, 10 + (event.severity || 1) * 2.4));
       dot.style.width = `${size}px`;
       dot.style.height = `${size}px`;
       dot.style.background = riskColor(event.risk_level);
       dot.title = `${displayTitle(event)} (${event.country || t("unknown")})`;
+      dot.setAttribute("aria-label", dot.title);
       dot.addEventListener("mouseenter", () => showEventPopup(event));
       dot.addEventListener("mouseleave", hideEventPopup);
       dot.addEventListener("click", () => {
+        hideEventPopup();
         if (event.country) setActiveCountry(event.country);
+        map.easeTo({
+          center: [event.lon as number, event.lat as number],
+          zoom: Math.max(map.getZoom?.() || 1, 3.2),
+          duration: 450,
+        });
         void analyzeMapEvent(event);
       });
 
@@ -1648,7 +1665,7 @@ function renderMap(events: EventItem[]): void {
 
 function renderAnalysisDetail(event: EventItem, isLoading = false): void {
   analysisFloatEl.classList.add("open");
-  const summary = event.ai_summary || event.summary || event.raw_summary || t("noSummary");
+  const summary = displaySummary(event);
   const impact = businessImpactText(event);
   const action = suggestedActionText(event);
   const market = event.market_impact || "";
@@ -1698,7 +1715,7 @@ function renderAnalysisDetail(event: EventItem, isLoading = false): void {
         <span>${statusText(event.status)}</span>
       </div>
       <h3>${displayTitle(event)}</h3>
-      ${event.title ? `<div class="original-title">${event.title}</div>` : ""}
+      ${event.title ? `<div class="original-title">${displayOriginalTitle(event)}</div>` : ""}
       <p>${isLoading ? t("analyzingOne") : summary}</p>
       <div class="analysis-meta">
         <span>国家/城市：${locationText(event.country, event.city)}</span>
@@ -1733,7 +1750,7 @@ function renderClusterDetail(events: EventItem[]): void {
           <button class="cluster-event-row" data-event-id="${event.id}">
             <span class="pill" style="background:${riskColor(event.risk_level)}">${riskText(event.risk_level)}</span>
             <b>${displayTitle(event)}</b>
-            ${event.title ? `<small>${event.title}</small>` : ""}
+            ${event.title ? `<small>${displayOriginalTitle(event)}</small>` : ""}
             <em>${event.source} · ${categoryText(event.category)} · 严重度 ${event.severity || 1}</em>
           </button>
         `,
@@ -1761,7 +1778,7 @@ async function analyzeMapEvent(event: EventItem): Promise<void> {
   if (!ready) return;
 
   try {
-    const result = await postJson<SingleAnalyzeResponse>(`/events/${event.id}/analyze?industry=${currentIndustry}&llm=${currentLlm}`);
+    const result = await postJson<SingleAnalyzeResponse>(`/events/${event.id}/analyze?industry=${currentIndustry}&llm=${currentLlm}&lang=${currentLanguage}`);
     if (!result.ok || !result.item) {
       showStatus(result.message || t("actionFailed"), "error");
       return;
@@ -1777,7 +1794,7 @@ async function analyzeMapEvent(event: EventItem): Promise<void> {
 function showEventPopup(event: EventItem): void {
   if (!mapReady || !maplibre || !map) return;
   hideEventPopup();
-  const summary = event.summary || event.ai_summary || event.raw_summary || "";
+  const summary = displaySummary(event);
   const timestamp = eventTimeValue(event);
   hoverPopup = new maplibre.Popup({ closeButton: false, closeOnClick: false, offset: 14, maxWidth: "320px" })
     .setLngLat([event.lon as number, event.lat as number])
@@ -1788,13 +1805,43 @@ function showEventPopup(event: EventItem): void {
           ${event.source} · ${relativeTime(timestamp)} · ${formatDateTime(timestamp)}
         </div>
         <strong>${displayTitle(event)}</strong>
-        ${event.title ? `<small>${event.title}</small>` : ""}
+        ${event.title ? `<small>${displayOriginalTitle(event)}</small>` : ""}
         <p>${summary.slice(0, 220) || t("noSummary")}</p>
         <small>${locationText(event.country, event.city)} · ${categoryText(event.category)}</small>
         ${renderRelevanceBadge(event)}
         ${relevanceReasonText(event) ? `<small>${relevanceReasonText(event)}</small>` : ""}
         ${typeof event.event_count === "number" ? `<small>${event.event_count} 条报道 · ${event.source_count || 1} 个来源 · RSS ${event.rss_count || 0} · GDELT ${event.gdelt_count || 0} · 风险 ${event.risk_score || 0}</small>` : ""}
         ${event.location_reason ? `<small>${event.location_reason} · ${Math.round((event.location_confidence || 0) * 100)}%</small>` : ""}
+      </div>
+    `)
+    .addTo(map);
+}
+
+function showClusterPopup(point: { lat: number; lon: number; count: number; sample: EventItem; events: EventItem[] }): void {
+  if (!mapReady || !maplibre || !map) return;
+  hideEventPopup();
+  const topRisks = point.events
+    .reduce<Record<string, number>>((acc, event) => {
+      const key = riskText(event.risk_level);
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+  const riskSummary = Object.entries(topRisks)
+    .map(([risk, count]) => `${risk} ${count}`)
+    .join(" · ");
+  const latest = point.events
+    .slice()
+    .sort((a, b) => new Date(eventTimeValue(b) || 0).getTime() - new Date(eventTimeValue(a) || 0).getTime())[0];
+  hoverPopup = new maplibre.Popup({ closeButton: false, closeOnClick: false, offset: 16, maxWidth: "280px" })
+    .setLngLat([point.lon, point.lat])
+    .setHTML(`
+      <div class="intel-popup compact">
+        <div class="intel-popup-meta">
+          <span>${t("cluster")}</span>
+          ${point.sample.country || t("mixed")} · ${point.count} ${t("events")}
+        </div>
+        <strong>${displayTitle(latest || point.sample)}</strong>
+        <small>${riskSummary || t("unknown")}</small>
       </div>
     `)
     .addTo(map);
@@ -1870,7 +1917,7 @@ function renderCountryDetail(insight: CountryInsight): void {
         .map(
           (item) => `<a href="${item.url}" target="_blank" rel="noopener noreferrer">
           <b>${displayTitle(item)}</b>
-          ${item.title ? `<em>${item.title}</em>` : ""}
+          ${item.title ? `<em>${displayOriginalTitle(item)}</em>` : ""}
           <small>${item.source} · ${riskText(item.risk_level)} · ${relativeTime(eventTimeValue(item))}</small>
         </a>`,
         )
@@ -1879,15 +1926,27 @@ function renderCountryDetail(insight: CountryInsight): void {
   `;
 }
 
+function activateSidePanel(panel: "brief" | "country" | "keywords"): void {
+  sideTabEls.forEach((button) => {
+    button.classList.toggle("active", button.dataset.sideTab === panel);
+  });
+  sidePanelEls.forEach((section) => {
+    section.classList.toggle("active", section.dataset.sidePanel === panel);
+  });
+}
+
 async function loadCountryDetail(country: string): Promise<void> {
   const range = timeRangeEl.value;
-  const data = await fetchJson<CountryInsight>(`/country-insight?country=${encodeURIComponent(country)}&time_range=${range}&industry=${currentIndustry}`);
+  const data = await fetchJson<CountryInsight>(
+    `/country-insight?country=${encodeURIComponent(country)}&time_range=${range}&industry=${currentIndustry}&lang=${currentLanguage}`,
+  );
   renderCountryDetail(data);
 }
 
 function setActiveCountry(country: string): void {
   activeCountry = country;
   countryFilterEl.value = country;
+  activateSidePanel("country");
   void Promise.all([loadCountryDetail(country), loadDashboard()]);
 }
 
@@ -2093,16 +2152,13 @@ async function loadDashboard(): Promise<void> {
   try {
     const range = timeRangeEl.value;
     const profileParam = activeProfile ? `&profile=${encodeURIComponent(profileQueryParam())}` : "";
-    const [metrics, brief, mapEvents, newsEvents] = await Promise.all([
+    const [metrics, brief, mapEvents] = await Promise.all([
       fetchJson<Metrics>(`/metrics?time_range=${range}&industry=${currentIndustry}`),
-      fetchJson<BriefResponse>(`/brief?time_range=${range}&industry=${currentIndustry}${profileParam}`),
-      fetchJson<MapEventsResponse>(`/map-events?${buildSignalQuery()}`),
-      fetchJson<EventsResponse>(`/events?${buildSignalQuery()}&page_size=80`),
+      fetchJson<BriefResponse>(`/brief?time_range=${range}&industry=${currentIndustry}${profileParam}&lang=${currentLanguage}`),
+      fetchJson<MapEventsResponse>(`/map-events?${buildSignalQuery()}&lang=${currentLanguage}`),
     ]);
     renderMetrics(metrics);
     renderBriefTable(brief.clusters || [], brief.brief);
-    renderNewsLibrary(newsEvents.items, newsEvents.total);
-    briefFloatEl.classList.add("open");
     renderConvergences(brief.convergences);
     renderMap(mapEvents.items);
     renderKeywordHits(mapEvents.items);
@@ -2160,7 +2216,14 @@ closeAnalysisBtn.addEventListener("click", () => {
 });
 
 closeBriefBtn.addEventListener("click", () => {
-  briefFloatEl.classList.remove("open");
+  activateSidePanel(activeCountry ? "country" : "keywords");
+});
+
+sideTabEls.forEach((button) => {
+  button.addEventListener("click", () => {
+    const panel = button.dataset.sideTab as "brief" | "country" | "keywords" | undefined;
+    if (panel) activateSidePanel(panel);
+  });
 });
 
 analysisDetailEl.addEventListener("click", (ev) => {
@@ -2191,14 +2254,6 @@ briefEl.addEventListener("click", (ev) => {
   const item = [...latestBriefItems, ...latestRenderedEvents].find((event) => event.id === row.dataset.eventId);
   if (!item) return;
   if (item.country) setActiveCountry(item.country);
-  openSignalItem(item);
-});
-
-newsLibraryEl.addEventListener("click", (ev) => {
-  const row = (ev.target as HTMLElement).closest(".news-row") as HTMLButtonElement | null;
-  if (!row) return;
-  const item = latestNewsItems.find((event) => event.id === row.dataset.eventId);
-  if (!item) return;
   openSignalItem(item);
 });
 

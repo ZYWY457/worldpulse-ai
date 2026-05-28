@@ -153,8 +153,9 @@ processing_pipeline = ProcessingPipeline(
 news_scheduler = NewsScheduler(
     ingestion_pipeline.run,
     enabled=env_bool("AUTO_COLLECT_ENABLED", True),
-    interval_minutes=env_int("AUTO_COLLECT_INTERVAL_MINUTES", 60),
+    interval_minutes=env_int("AUTO_COLLECT_INTERVAL_MINUTES", 1440),
     startup_delay_seconds=env_int("AUTO_COLLECT_STARTUP_DELAY_SECONDS", 20),
+    daily_run_at=os.getenv("AUTO_COLLECT_DAILY_AT", "08:00"),
     job_label="采集新闻",
 )
 processing_scheduler = NewsScheduler(
@@ -256,6 +257,62 @@ def safe_value(value: Any) -> Any:
     if value is pd.NaT:
         return None
     return value
+
+
+ZH_HEADLINE_REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"\bTrump\b", re.IGNORECASE), "特朗普"),
+    (re.compile(r"\bChina\b", re.IGNORECASE), "中国"),
+    (re.compile(r"\bChinese\b", re.IGNORECASE), "中国"),
+    (re.compile(r"\bUK\b"), "英国"),
+    (re.compile(r"\bUnited Kingdom\b", re.IGNORECASE), "英国"),
+    (re.compile(r"\bBritain\b", re.IGNORECASE), "英国"),
+    (re.compile(r"\bUkraine\b", re.IGNORECASE), "乌克兰"),
+    (re.compile(r"\bRussia\b", re.IGNORECASE), "俄罗斯"),
+    (re.compile(r"\btariff\b", re.IGNORECASE), "关税"),
+    (re.compile(r"\btrade\b", re.IGNORECASE), "贸易"),
+    (re.compile(r"\bshipping\b", re.IGNORECASE), "航运"),
+    (re.compile(r"\bport\b", re.IGNORECASE), "港口"),
+    (re.compile(r"\bcybersecurity\b", re.IGNORECASE), "网络安全"),
+    (re.compile(r"\bchip\b", re.IGNORECASE), "芯片"),
+    (re.compile(r"\bsemiconductor\b", re.IGNORECASE), "半导体"),
+    (re.compile(r"\boil\b", re.IGNORECASE), "油价"),
+    (re.compile(r"\bgas\b", re.IGNORECASE), "天然气"),
+]
+
+
+def localize_headline_zh(text: str) -> str:
+    if not text:
+        return ""
+    localized = text
+    for pattern, replacement in ZH_HEADLINE_REPLACEMENTS:
+        localized = pattern.sub(replacement, localized)
+    return localized
+
+
+def build_localized_event(record: dict[str, Any], lang: str) -> dict[str, Any]:
+    item = dict(record)
+    title = str(item.get("title") or "")
+    summary_candidates = [
+        str(item.get("ai_summary") or ""),
+        str(item.get("summary") or ""),
+        str(item.get("raw_summary") or ""),
+    ]
+    summary_candidates = [text for text in summary_candidates if text.strip()]
+    if lang == "zh":
+        title_zh = localize_headline_zh(title)
+        zh_summary = next((text for text in summary_candidates if re.search(r"[\u4e00-\u9fff]", text)), "")
+        if not zh_summary and summary_candidates:
+            zh_summary = localize_headline_zh(summary_candidates[0])
+        item["title_zh"] = title_zh or title
+        item["summary_zh"] = zh_summary or item["title_zh"]
+    else:
+        item["title_zh"] = title
+        item["summary_zh"] = summary_candidates[0] if summary_candidates else ""
+    return item
+
+
+def localize_event_records(records: list[dict[str, Any]], lang: str) -> list[dict[str, Any]]:
+    return [build_localized_event(record, lang) for record in records]
 
 
 def sorted_unique_values(df: pd.DataFrame, column: str) -> list[str]:
@@ -821,12 +878,13 @@ def analyze_single_event(
     event_id: str,
     industry: str = Query(default="overview", pattern="^(overview|trade|finance|tech|supply_chain|geopolitics|content)$"),
     llm: str = Query(default="auto", pattern="^(auto|openai|deepseek|ollama)$"),
+    lang: str = Query(default="zh", pattern="^(zh|en)$"),
 ) -> dict[str, Any]:
     item = analyzer.analyze_event(event_id, get_industry(industry), llm=llm)
     if not item:
         return {"ok": False, "message": "Analysis failed", "item": None}
     aggregator.rebuild_recent_clusters()
-    return {"ok": True, "message": "分析完成", "item": item}
+    return {"ok": True, "message": "分析完成", "item": build_localized_event(item, lang)}
 
 
 @app.get("/events")
@@ -843,6 +901,7 @@ def get_events(
     page_size: int = Query(default=50, ge=1, le=200),
     sort_by: str = Query(default="published_at", pattern="^(published_at|severity|risk_level|source|country|category)$"),
     order: str = Query(default="desc", pattern="^(asc|desc)$"),
+    lang: str = Query(default="zh", pattern="^(zh|en)$"),
 ) -> dict[str, Any]:
     user_profile = parse_profile_param(profile)
     df = load_events_df()
@@ -875,7 +934,7 @@ def get_events(
     total = int(len(records))
     start = (page - 1) * page_size
     end = start + page_size
-    paged = records[start:end]
+    paged = localize_event_records(records[start:end], lang)
 
     return {
         "items": paged,
@@ -900,6 +959,7 @@ def get_map_events(
     status: str | None = Query(default=None, pattern="^(raw|analyzed|failed)$"),
     sort_by: str = Query(default="published_at", pattern="^(published_at|severity|risk_level|source|country|category)$"),
     order: str = Query(default="desc", pattern="^(asc|desc)$"),
+    lang: str = Query(default="zh", pattern="^(zh|en)$"),
 ) -> dict[str, Any]:
     user_profile = parse_profile_param(profile)
     df = load_events_df()
@@ -930,8 +990,9 @@ def get_map_events(
     elif "published_at" in df.columns:
         df = df.sort_values(by="published_at", ascending=False)
 
+    records = sort_records_by_relevance(df_to_records(df), user_profile)
     return {
-        "items": sort_records_by_relevance(df_to_records(df), user_profile),
+        "items": localize_event_records(records, lang),
         "total": int(len(df)),
     }
 
@@ -993,6 +1054,7 @@ def get_brief(
     time_range: str = Query(default="24h", pattern="^(1h|24h|7d|30d)$"),
     industry: str = Query(default="overview", pattern="^(overview|trade|finance|tech|supply_chain|geopolitics|content)$"),
     profile: str | None = None,
+    lang: str = Query(default="zh", pattern="^(zh|en)$"),
 ) -> dict[str, Any]:
     user_profile = parse_profile_param(profile)
     df = apply_time_filter(load_events_df(), time_range)
@@ -1010,7 +1072,7 @@ def get_brief(
     return {
         "brief": brief,
         "convergences": convergences,
-        "clusters": cluster_records[:30],
+        "clusters": localize_event_records(cluster_records[:30], lang),
     }
 
 
@@ -1019,6 +1081,7 @@ def get_country_insight(
     country: str = Query(..., min_length=1),
     time_range: str = Query(default="24h", pattern="^(1h|24h|7d|30d)$"),
     industry: str = Query(default="overview", pattern="^(overview|trade|finance|tech|supply_chain|geopolitics|content)$"),
+    lang: str = Query(default="zh", pattern="^(zh|en)$"),
 ) -> dict[str, Any]:
     df = apply_time_filter(load_events_df(), time_range)
     df = apply_industry_filter(df, industry)
@@ -1082,25 +1145,25 @@ def get_country_insight(
         "categories": category_counts,
         "risk_distribution": risk_counts,
         "daily_trend": trend_items,
-        "latest_events": df_to_records(latest_df),
+        "latest_events": localize_event_records(df_to_records(latest_df), lang),
     }
 
 
 @app.get("/events/{event_id}")
-def get_event_detail(event_id: str) -> dict[str, Any]:
+def get_event_detail(event_id: str, lang: str = Query(default="zh", pattern="^(zh|en)$")) -> dict[str, Any]:
     df = load_events_df()
     target = df[df["id"] == event_id]
     if target.empty:
         return {"ok": False, "message": "Event not found", "item": None}
 
-    item = df_to_records(target.head(1))[0]
+    item = build_localized_event(df_to_records(target.head(1))[0], lang)
     related = df[(df["id"] != event_id)]
     if item.get("country"):
         related = related[related["country"] == item["country"]]
     if item.get("category"):
         related = related[related["category"] == item["category"]]
     related = related.sort_values(by="published_at", ascending=False).head(8)
-    related_records = df_to_records(related)
+    related_records = localize_event_records(df_to_records(related), lang)
     risk_breakdown = risk_scorer.explain_cluster_score(
         {
             "severity": item.get("severity"),
