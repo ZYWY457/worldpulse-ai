@@ -173,7 +173,7 @@ if (!appEl) throw new Error("App container not found");
 
 type Language = "zh" | "en";
 type IndustryMode = "overview" | "trade" | "finance" | "tech" | "supply_chain" | "geopolitics" | "content";
-type CurrentView = "explore" | "radar";
+type CurrentView = "explore" | "radar" | "signalSet";
 type I18nKey =
   | "subtitle"
   | "collect"
