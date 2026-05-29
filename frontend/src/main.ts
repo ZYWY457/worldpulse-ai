@@ -1,6 +1,6 @@
 import "./style.css";
 
-type EventItem = {
+export type EventItem = {
   id: string;
   title: string;
   title_zh?: string | null;
@@ -173,6 +173,7 @@ if (!appEl) throw new Error("App container not found");
 
 type Language = "zh" | "en";
 type IndustryMode = "overview" | "trade" | "finance" | "tech" | "supply_chain" | "geopolitics" | "content";
+type CurrentView = "explore" | "radar";
 type I18nKey =
   | "subtitle"
   | "collect"
@@ -247,7 +248,37 @@ type I18nKey =
   | "llmUnavailable"
   | "sourceHealth"
   | "llmConfig"
-  | "llmSave";
+  | "llmSave"
+  | "exploreTitle"
+  | "exploreSubtitle"
+  | "exploreHero"
+  | "exploreCta"
+  | "exploreEnterRadar"
+  | "exploreLowNoiseTitle"
+  | "explorePrinciple1"
+  | "explorePrinciple2"
+  | "explorePrinciple3"
+  | "explorePrinciple4"
+  | "explorePrinciple5"
+  | "exploreWorthKnowing"
+  | "exploreWhyMatters"
+  | "exploreSourceQuality"
+  | "exploreNoiseHint"
+  | "exploreViewDetail"
+  | "exploreOpenOriginal"
+  | "exploreViewOnMap"
+  | "exploreContinueExploring"
+  | "exploreNoData"
+  | "exploreUpdateTime"
+  | "exploreHighQuality"
+  | "exploreMediumHighQuality"
+  | "exploreMediumQuality"
+  | "exploreNeedsVerification"
+  | "exploreMultiSource"
+  | "exploreFromRssGdelt"
+  | "exploreLowNoise"
+  | "exploreNeedsCheck"
+  | "exploreInfoInsufficient";
 
 const i18n: Record<Language, Record<I18nKey, string>> = {
   zh: {
@@ -325,6 +356,36 @@ const i18n: Record<Language, Record<I18nKey, string>> = {
     sourceHealth: "源健康",
     llmConfig: "模型设置",
     llmSave: "保存配置",
+    exploreTitle: "WorldPulse Explore",
+    exploreSubtitle: "用中文低噪声理解英文世界",
+    exploreHero: "不知道看什么？看看今天真正值得知道的事",
+    exploreCta: "给我一些值得知道的",
+    exploreEnterRadar: "进入 Radar 控制台",
+    exploreLowNoiseTitle: "低噪声模式",
+    explorePrinciple1: "优先显示高质量来源",
+    explorePrinciple2: "聚合源仅作为线索",
+    explorePrinciple3: "区分事实、影响和不确定性",
+    explorePrinciple4: "不用夸张标题制造焦虑",
+    explorePrinciple5: "不把社交热度当作事实",
+    exploreWorthKnowing: "今天值得知道",
+    exploreWhyMatters: "为什么值得知道",
+    exploreSourceQuality: "来源质量",
+    exploreNoiseHint: "噪声提示",
+    exploreViewDetail: "查看详情",
+    exploreOpenOriginal: "打开原文",
+    exploreViewOnMap: "去地图看",
+    exploreContinueExploring: "继续探索",
+    exploreNoData: "暂无数据",
+    exploreUpdateTime: "更新时间",
+    exploreHighQuality: "高",
+    exploreMediumHighQuality: "中高",
+    exploreMediumQuality: "中",
+    exploreNeedsVerification: "待验证",
+    exploreMultiSource: "多来源交叉出现",
+    exploreFromRssGdelt: "来自 RSS / GDELT / 官方源",
+    exploreLowNoise: "低噪声",
+    exploreNeedsCheck: "需核验",
+    exploreInfoInsufficient: "信息不足",
   },
   en: {
     subtitle: "Multi-Industry Signal Radar",
@@ -401,6 +462,36 @@ const i18n: Record<Language, Record<I18nKey, string>> = {
     sourceHealth: "Sources",
     llmConfig: "LLM Settings",
     llmSave: "Save",
+    exploreTitle: "WorldPulse Explore",
+    exploreSubtitle: "Understand the world without noise",
+    exploreHero: "I don't know what to search. Show me something worth knowing.",
+    exploreCta: "Show me something worth knowing",
+    exploreEnterRadar: "Enter Radar Dashboard",
+    exploreLowNoiseTitle: "Low-Noise Mode",
+    explorePrinciple1: "Prioritize high-quality sources",
+    explorePrinciple2: "Aggregated sources are clues, not facts",
+    explorePrinciple3: "Distinguish facts, impacts, and uncertainties",
+    explorePrinciple4: "No clickbait or fear-mongering headlines",
+    explorePrinciple5: "Social热度 is not fact",
+    exploreWorthKnowing: "Worth Knowing Today",
+    exploreWhyMatters: "Why it matters",
+    exploreSourceQuality: "Source quality",
+    exploreNoiseHint: "Noise hint",
+    exploreViewDetail: "View details",
+    exploreOpenOriginal: "Open original",
+    exploreViewOnMap: "View on map",
+    exploreContinueExploring: "Continue exploring",
+    exploreNoData: "No data available",
+    exploreUpdateTime: "Updated at",
+    exploreHighQuality: "High",
+    exploreMediumHighQuality: "Medium-High",
+    exploreMediumQuality: "Medium",
+    exploreNeedsVerification: "Needs verification",
+    exploreMultiSource: "Cross-verified by multiple sources",
+    exploreFromRssGdelt: "From RSS / GDELT / Official sources",
+    exploreLowNoise: "Low noise",
+    exploreNeedsCheck: "Needs verification",
+    exploreInfoInsufficient: "Insufficient information",
   },
 };
 
@@ -672,6 +763,7 @@ let briefSortKey: "risk_score" | "last_seen" | "source_count" | "event_count" = 
 let currentIndustry: IndustryMode = (localStorage.getItem("worldpulse-industry") as IndustryMode | null) || "overview";
 let activeProfile: UserProfile | null = loadUserProfile();
 let currentLlm: LlmChoice = (localStorage.getItem("worldpulse-llm") as LlmChoice | null) || "auto";
+let currentView: CurrentView = (localStorage.getItem("worldpulse-view") as CurrentView | null) || "explore";
 let llmChecking = false;
 
 const INDUSTRIES: Record<IndustryMode, { name: string; description: string; keywords: string[] }> = {
